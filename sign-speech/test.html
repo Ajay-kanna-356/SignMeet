@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Sign Language Test Client</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            background: #222;
+            color: #fff;
+        }
+
+        video {
+            border: 2px solid #555;
+            border-radius: 8px;
+            transform: scaleX(-1);
+        }
+
+        /* Mirror effect */
+        #output {
+            font-size: 2rem;
+            color: #0f0;
+            margin: 20px;
+            font-weight: bold;
+            height: 50px;
+        }
+
+        #buffer {
+            color: #aaa;
+            margin-bottom: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            background: #d9534f;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Sign Language Integration Test</h1>
+    <video id="webcam" class="input_video" autoplay playsinline width="640" height="480" style="display:none;"></video>
+    <canvas id="canvas" class="output_canvas" width="640" height="480"></canvas>
+
+    <div id="buffer">Buffer: 0 frames</div>
+    <div id="output">Waiting for sign...</div>
+
+    <button onclick="resetBuffer()">Reset (Press 'C')</button>
+
+    <!-- MediaPipe Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"
+        crossorigin="anonymous"></script>
+
+    <script>
+        const videoElement = document.getElementById('webcam');
+        const canvasElement = document.getElementById('canvas');
+        const ctx = canvasElement.getContext('2d');
+        const output = document.getElementById('output');
+        const bufferDisplay = document.getElementById('buffer');
+
+        const USER_ID = "test_user_1";
+        let lastSent = 0;
+        const SEND_INTERVAL = 100; // 100ms = 10fps
+
+        // Helper: flattened array of landmarks (x, y, z)
+        function extractKeypoints(results) {
+            // Order must match Python: Left Hand (63) + Right Hand (63) = 126
+
+            let lh = new Array(21 * 3).fill(0);
+            let rh = new Array(21 * 3).fill(0);
+
+            if (results.leftHandLandmarks) {
+                lh = [];
+                for (let lm of results.leftHandLandmarks) {
+                    lh.push(lm.x, lm.y, lm.z);
+                }
+            }
+
+            if (results.rightHandLandmarks) {
+                rh = [];
+                for (let lm of results.rightHandLandmarks) {
+                    rh.push(lm.x, lm.y, lm.z);
+                }
+            }
+
+            return [...lh, ...rh];
+        }
+
+        async function onResults(results) {
+            // Draw
+            ctx.save();
+            ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            ctx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+            // Draw Connectors (Optional, for visual feedback)
+            drawConnectors(ctx, results.leftHandLandmarks, HAND_CONNECTIONS, { color: '#CC0000', lineWidth: 2 });
+            drawLandmarks(ctx, results.leftHandLandmarks, { color: '#00FF00', lineWidth: 1 });
+            drawConnectors(ctx, results.rightHandLandmarks, HAND_CONNECTIONS, { color: '#00CC00', lineWidth: 2 });
+            drawLandmarks(ctx, results.rightHandLandmarks, { color: '#FF0000', lineWidth: 1 });
+            ctx.restore();
+
+            // Send Data (Throttled)
+            const now = Date.now();
+            if (now - lastSent > SEND_INTERVAL) {
+                lastSent = now;
+                const keypoints = extractKeypoints(results);
+                sendKeypoints(keypoints);
+            }
+        }
+
+        const holistic = new Holistic({
+            locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`;
+            }
+        });
+
+        holistic.setOptions({
+            modelComplexity: 1,
+            smoothLandmarks: true,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        holistic.onResults(onResults);
+
+        const camera = new Camera(videoElement, {
+            onFrame: async () => {
+                await holistic.send({ image: videoElement });
+            },
+            width: 640,
+            height: 480
+        });
+        camera.start();
+
+        async function sendKeypoints(keypoints) {
+            try {
+                const response = await fetch('http://localhost:3000/process-sign', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: USER_ID,
+                        keypoints: keypoints
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.word) {
+                    output.innerText = "DETECTED: " + data.word;
+                    output.style.color = "#00ff00";
+                    setTimeout(() => output.style.color = "#fff", 500);
+                }
+
+                if (data.buffer_length !== undefined) {
+                    bufferDisplay.innerText = `Buffer: ${data.buffer_length} frames`;
+                }
+
+            } catch (err) {
+                console.error("Server Error:", err);
+            }
+        }
+
+        async function resetBuffer() {
+            await fetch('http://localhost:3000/reset-sign', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: USER_ID })
+            });
+            output.innerText = "Buffer Cleared";
+            bufferDisplay.innerText = "Buffer: 0 frames";
+        }
+    </script>
+</body>
+
+</html>
