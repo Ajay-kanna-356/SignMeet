@@ -1,0 +1,40 @@
+{
+  "name": "signmeet",
+  "version": "1.0.0",
+  "description": "Real time ISL integrated meeting platform",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite build --watch",
+  "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ajay-kanna-356/SignMeet.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Ajay-kanna-356/SignMeet/issues"
+  },
+  "homepage": "https://github.com/Ajay-kanna-356/SignMeet#readme",
+  "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
+    "@tweenjs/tween.js": "^25.0.0",
+    "@types/three": "^0.182.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "three": "^0.182.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.36",
+    "@types/node": "^25.2.1",
+    "@types/react": "^19.2.13",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.3",
+    "vite": "^7.3.1"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "SignMeet - Live Avatar",
+  "version": "1.0",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": ["https://meet.google.com/*"],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "assets/idle.glb",
+        "assets/hello.glb",
+        "assets/cool.glb",
+        "assets/good.glb",
+        "assets/alright.glb"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://meet.google.com/*"],
+      "js": ["assets/content.js"], 
+      "run_at": "document_idle"
+    }
+  ]
+}
