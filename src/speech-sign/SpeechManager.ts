@@ -4,12 +4,20 @@ const DICTIONARY: Record<string, string> = {
   'hello': 'hello', 'hi': 'hello',
   'cool': 'cool', 'awesome': 'cool',
   'good': 'good', 'great': 'good',
-  'alright': 'alright', 'ok': 'alright'
+  'alright': 'alright', 'ok': 'alright', 'okay': 'alright',
+  'technology': 'technology', 'tech': 'technology',
+  'job': 'job', 'work': 'job',
+  'new': 'new', 'fresh': 'new',
+  'secretary': 'secretary', 'assistant': 'secretary',
+  'sorry': 'sorry', 'apologize': 'sorry', 'apology': 'sorry',
+  'team': 'team', 'group': 'team',
+  'thank you': 'thankyou', 'thanks': 'thankyou',
 };
 
 export class SpeechManager {
   private queue: string[] = [];
-  private lastProcessedSentence = "";
+  // Change: Store words array instead of raw string for precise diffing
+  private lastProcessedWords: string[] = [];
   private onQueueChange: (queue: string[]) => void;
 
   constructor(onQueueUpdate: (queue: string[]) => void) {
@@ -21,52 +29,60 @@ export class SpeechManager {
     const cleanSentence = sentence.trim().toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
 
     if (!cleanSentence) return;
-    if (cleanSentence === this.lastProcessedSentence) return;
 
-    // 2. Extract only NEW words
-    let newText = "";
+    // 2. Split into words immediately
+    const currentWords = cleanSentence.split(/\s+/);
+    
+    // 3. Find the divergence point
+    // We compare the new word list with the old one index by index.
+    // As soon as we find a mismatch, we consider everything from that point onwards as "new".
+    let diffIndex = 0;
+    const len = Math.min(this.lastProcessedWords.length, currentWords.length);
 
-    // Check if the new sentence is just an extension of the old one
-    if (cleanSentence.startsWith(this.lastProcessedSentence)) {
-      newText = cleanSentence.substring(this.lastProcessedSentence.length).trim();
-    } else {
-      // The sentence changed completely (new speaker or Google correction)
-      // We process the whole thing to be safe, or you could try to find the diff
-      newText = cleanSentence;
+    while (diffIndex < len) {
+      if (this.lastProcessedWords[diffIndex] !== currentWords[diffIndex]) {
+        break;
+      }
+      diffIndex++;
     }
 
-    this.lastProcessedSentence = cleanSentence;
+    // 4. Extract only the NEW words (from diffIndex to the end)
+    const newWords = currentWords.slice(diffIndex);
 
-    if (!newText) return;
+    // Update memory to the current state
+    this.lastProcessedWords = currentWords;
 
-    const words = newText.split(/\s+/);
+    if (newWords.length === 0) return;
+
+    // 5. Process the new words for animations
     const newAnims: string[] = [];
-    let lastAddedWord = "";
-    words.forEach(word => {
-      // 1. Skip if it's the exact same word as immediately before (Meet glitch)
-      if (word === lastAddedWord) return;
-
-      // 2. Match against dictionary
+    
+    newWords.forEach(word => {
       if (DICTIONARY[word]) {
         newAnims.push(DICTIONARY[word]);
-        lastAddedWord = word;
       }
     });
 
     if (newAnims.length > 0) {
       console.log(`[SIGNMEET] Match Found: ${newAnims.join(', ')}`);
-      this.queue = [...this.queue, ...newAnims];
+      
+      // CRITICAL FIX: Do not append to history. Only send the new batch.
+      // The AvatarController maintains its own internal playlist, so we 
+      // just need to feed it the new items.
+      this.queue = newAnims; 
       this.onQueueChange(this.queue);
     }
   }
 
   public shiftQueue() {
-    this.queue.shift();
-    this.onQueueChange([...this.queue]);
+    // This function is likely called by the UI when it consumes the queue.
+    // We clear the local queue to prevent re-emitting the same batch.
+    this.queue = [];
+    this.onQueueChange([]);
   }
 
   public clearMemory() {
-    this.lastProcessedSentence = "";
+    this.lastProcessedWords = [];
     this.queue = [];
     this.onQueueChange([]);
   }

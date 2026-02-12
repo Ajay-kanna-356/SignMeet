@@ -1,6 +1,6 @@
 
 // src/content/Overlay.tsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { AvatarController } from '../speech-sign/AvatarController';
 import { SpeechManager } from '../speech-sign/SpeechManager';
@@ -15,9 +15,10 @@ export const Overlay = () => {
   const [captionsText, setCaptionsText] = useState("System Ready");
   const [detectedSign, setDetectedSign] = useState("");
 
-  const manager = useMemo(() => new SpeechManager((newQueue) => {
+  // 1. Use useRef instead of useMemo for the class instance
+  const manager = useRef(new SpeechManager((newQueue) => {
     setQueue([...newQueue]);
-  }), []);
+  }));
 
   // HANDLE MODES
   useEffect(() => {
@@ -30,10 +31,10 @@ export const Overlay = () => {
 
       speechCapture = new MeetCaptionCapture((text) => {
         setCaptionsText(text);
-        manager.processSentence(text);
+        // 2. Use .current here
+        manager.current.processSentence(text);
       });
       speechCapture.start();
-
     } else if (mode === 'NORMAL') {
       setCaptionsText("Avatar Paused");
       setDetectedSign("");
@@ -59,28 +60,25 @@ export const Overlay = () => {
     } else {
       setCaptionsText("Avatar Paused");
       setDetectedSign("");
-      manager.clearMemory();
     }
 
     return () => {
       speechCapture?.stop();
       signCapture?.stop();
     };
-  }, [mode, manager]);
+  }, [mode]);
 
   const handleTestAvatar = () => {
     if (mode !== 'SPEECH_IMPAIRED') setMode('SPEECH_IMPAIRED');
     setQueue([]);
     setTimeout(() => {
-      manager.processSentence("hello cool good alright");
+      manager.current.processSentence("hello cool good alright");
     }, 100);
   };
 
 
-
   const handleChildConsumed = () => {
     setQueue([]);
-    manager.shiftQueue();
   };
 
   return (

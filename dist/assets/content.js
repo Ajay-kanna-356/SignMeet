@@ -66172,7 +66172,14 @@ No matching component was found for:
     hello: chrome.runtime.getURL("assets/hello.glb"),
     cool: chrome.runtime.getURL("assets/cool.glb"),
     good: chrome.runtime.getURL("assets/good.glb"),
-    alright: chrome.runtime.getURL("assets/alright.glb")
+    alright: chrome.runtime.getURL("assets/alright.glb"),
+    job: chrome.runtime.getURL("assets/job.glb"),
+    new: chrome.runtime.getURL("assets/new.glb"),
+    secretary: chrome.runtime.getURL("assets/secretary.glb"),
+    sorry: chrome.runtime.getURL("assets/sorry.glb"),
+    team: chrome.runtime.getURL("assets/team.glb"),
+    technology: chrome.runtime.getURL("assets/technology.glb"),
+    thankyou: chrome.runtime.getURL("assets/thankyou.glb")
   };
   const AvatarController = ({ queue, onAnimationFinished }) => {
     const group = reactExports.useRef(null);
@@ -66184,7 +66191,14 @@ No matching component was found for:
       hello: useGLTF(MODELS.hello),
       cool: useGLTF(MODELS.cool),
       good: useGLTF(MODELS.good),
-      alright: useGLTF(MODELS.alright)
+      alright: useGLTF(MODELS.alright),
+      job: useGLTF(MODELS.job),
+      new: useGLTF(MODELS.new),
+      secretary: useGLTF(MODELS.secretary),
+      sorry: useGLTF(MODELS.sorry),
+      team: useGLTF(MODELS.team),
+      technology: useGLTF(MODELS.technology),
+      thankyou: useGLTF(MODELS.thankyou)
     };
     const animations = reactExports.useMemo(() => {
       const clips = [];
@@ -66197,7 +66211,7 @@ No matching component was found for:
         }
       });
       Object.entries(gltfs).forEach(([name, gltf]) => {
-        const animIndex = name === "hello" || name === "good" || name === "idle" ? 0 : 1;
+        const animIndex = name === "hello" || name === "good" || name === "idle" ? 0 : name === "technology" ? 2 : 1;
         const originalClip = gltf.animations[animIndex] || gltf.animations[0];
         if (originalClip) {
           const clip = originalClip.clone();
@@ -66277,48 +66291,63 @@ No matching component was found for:
     "good": "good",
     "great": "good",
     "alright": "alright",
-    "ok": "alright"
+    "ok": "alright",
+    "okay": "alright",
+    "technology": "technology",
+    "tech": "technology",
+    "job": "job",
+    "work": "job",
+    "new": "new",
+    "fresh": "new",
+    "secretary": "secretary",
+    "assistant": "secretary",
+    "sorry": "sorry",
+    "apologize": "sorry",
+    "apology": "sorry",
+    "team": "team",
+    "group": "team",
+    "thank you": "thankyou",
+    "thanks": "thankyou"
   };
   class SpeechManager {
     constructor(onQueueUpdate) {
       this.queue = [];
-      this.lastProcessedSentence = "";
+      this.lastProcessedWords = [];
       this.onQueueChange = onQueueUpdate;
     }
     processSentence(sentence) {
       const cleanSentence = sentence.trim().toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
       if (!cleanSentence) return;
-      if (cleanSentence === this.lastProcessedSentence) return;
-      let newText = "";
-      if (cleanSentence.startsWith(this.lastProcessedSentence)) {
-        newText = cleanSentence.substring(this.lastProcessedSentence.length).trim();
-      } else {
-        newText = cleanSentence;
+      const currentWords = cleanSentence.split(/\s+/);
+      let diffIndex = 0;
+      const len = Math.min(this.lastProcessedWords.length, currentWords.length);
+      while (diffIndex < len) {
+        if (this.lastProcessedWords[diffIndex] !== currentWords[diffIndex]) {
+          break;
+        }
+        diffIndex++;
       }
-      this.lastProcessedSentence = cleanSentence;
-      if (!newText) return;
-      const words = newText.split(/\s+/);
+      const newWords = currentWords.slice(diffIndex);
+      this.lastProcessedWords = currentWords;
+      if (newWords.length === 0) return;
       const newAnims = [];
-      let lastAddedWord = "";
-      words.forEach((word) => {
-        if (word === lastAddedWord) return;
+      newWords.forEach((word) => {
         if (DICTIONARY[word]) {
           newAnims.push(DICTIONARY[word]);
-          lastAddedWord = word;
         }
       });
       if (newAnims.length > 0) {
         console.log(`[SIGNMEET] Match Found: ${newAnims.join(", ")}`);
-        this.queue = [...this.queue, ...newAnims];
+        this.queue = newAnims;
         this.onQueueChange(this.queue);
       }
     }
     shiftQueue() {
-      this.queue.shift();
-      this.onQueueChange([...this.queue]);
+      this.queue = [];
+      this.onQueueChange([]);
     }
     clearMemory() {
-      this.lastProcessedSentence = "";
+      this.lastProcessedWords = [];
       this.queue = [];
       this.onQueueChange([]);
     }
@@ -66444,9 +66473,9 @@ No matching component was found for:
     const [queue, setQueue] = reactExports.useState([]);
     const [captionsText, setCaptionsText] = reactExports.useState("System Ready");
     const [detectedSign, setDetectedSign] = reactExports.useState("");
-    const manager = reactExports.useMemo(() => new SpeechManager((newQueue) => {
+    const manager = reactExports.useRef(new SpeechManager((newQueue) => {
       setQueue([...newQueue]);
-    }), []);
+    }));
     reactExports.useEffect(() => {
       let speechCapture = null;
       let signCapture = null;
@@ -66455,7 +66484,7 @@ No matching component was found for:
         setDetectedSign("");
         speechCapture = new MeetCaptionCapture((text) => {
           setCaptionsText(text);
-          manager.processSentence(text);
+          manager.current.processSentence(text);
         });
         speechCapture.start();
       } else if (mode === "NORMAL") {
@@ -66480,23 +66509,21 @@ No matching component was found for:
       } else {
         setCaptionsText("Avatar Paused");
         setDetectedSign("");
-        manager.clearMemory();
       }
       return () => {
         speechCapture?.stop();
         signCapture?.stop();
       };
-    }, [mode, manager]);
+    }, [mode]);
     const handleTestAvatar = () => {
       if (mode !== "SPEECH_IMPAIRED") setMode("SPEECH_IMPAIRED");
       setQueue([]);
       setTimeout(() => {
-        manager.processSentence("hello cool good alright");
+        manager.current.processSentence("hello cool good alright");
       }, 100);
     };
     const handleChildConsumed = () => {
       setQueue([]);
-      manager.shiftQueue();
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { position: "fixed", inset: 0, pointerEvents: "none", zIndex: 999999 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
