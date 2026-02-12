@@ -14,10 +14,15 @@ export class MeetCaptionCapture {
   }
 
   public start() {
-    console.log("[SIGNMEET] Fail-Safe Capture Started.");
-    
+    console.log("[SIGNMEET] Capture Started. Baselining existing text...");
+
+    // 1. Initial snapshot: Capture what's currently on screen and save it to lastText 
+    // This prevents the avatar from performing signs for stuff said 5 minutes ago.
+    this.extractText(true);
+
+    // 2. Start observing for CHANGES
     this.observer = new MutationObserver(() => {
-      this.extractText();
+      this.extractText(false);
     });
 
     this.observer.observe(document.body, {
@@ -31,36 +36,40 @@ export class MeetCaptionCapture {
     this.observer?.disconnect();
   }
 
-  private extractText() {
-    // 1. Try to find the most common caption containers
-    // We use a broader selector because aria-label might be on a parent or child
+  private extractText(isInitialBaseline: boolean = false) {
+    // 1. SKIP if we're in a settings/menu dialog
+    const settingsDialog = document.querySelector('[role="dialog"], [role="menu"]');
+    if (settingsDialog && settingsDialog.textContent?.includes('language')) {
+      return; // Ignore settings menu
+    }
+
+    // 2. Try to find the caption container (Broad search)
     const container = document.querySelector('div[role="region"][aria-label="Captions"], .a4cQT, div[jscontroller="Mx5RQq"]');
-    
+
     if (!container) return;
 
-    // 2. Target the specific elements that hold the text lines
-    // In your screenshot, these were divs like .VbkSUe or spans
+    // 3. Target the text elements (Broad search)
     const textElements = container.querySelectorAll('span, .VbkSUe, [jsname="tS79ce"]');
-    
+
     if (textElements.length === 0) return;
 
-    // 3. Process the text and filter out "Speaker Names" and "UI Metadata"
+    // 3. Process the text and filter out duplicates and junk
     let validWords: string[] = [];
+    let seenChunks = new Set<string>();
 
     textElements.forEach((el) => {
       const text = (el as HTMLElement).innerText.trim().toLowerCase();
-      
-      // SKIP if:
-      // - It's empty
-      // - It's one of the UI junk words (format_size, etc.)
-      // - It looks like a speaker name (usually found in a div with no jsname or specific classes)
+      if (!text || text.length < 2) return;
+
+      // Skip if this specific chunk was already seen in this DOM snapshot
+      // (Google Meet often has redundant/duplicate spans)
+      if (seenChunks.has(text)) return;
+      seenChunks.add(text);
+
       const isJunk = this.UI_JUNK.some(junk => text.includes(junk));
-      
-      // Name Filter Logic: In Meet, names are often in divs that don't have the "tS79ce" jsname
-      // If the element is a speaker name container, we skip it.
       const isSpeakerName = el.classList.contains('ade6rb') || el.getAttribute('jsname') === 'Z98uS';
 
-      if (text && !isJunk && !isSpeakerName && text.length > 1) {
+      if (!isJunk && !isSpeakerName) {
         validWords.push(text);
       }
     });
@@ -69,11 +78,13 @@ export class MeetCaptionCapture {
 
     // 4. Send to avatar if the text has changed
     if (cleanText && cleanText !== this.lastText) {
-      // Check if the current text is just a repeat of the last (Meet often appends text)
-      // We only want the new part
       this.lastText = cleanText;
-      console.log(`[SIGNMEET] Clean Speech: ${cleanText}`);
-      this.callback(cleanText);
+
+      // ONLY trigger the avatar if we are NOT in the initial setup phase
+      if (!isInitialBaseline) {
+        console.log(`[SIGNMEET] New Speech Detected: ${cleanText}`);
+        this.callback(cleanText);
+      }
     }
   }
 }

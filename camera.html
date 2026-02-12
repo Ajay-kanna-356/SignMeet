@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SignMeet Camera</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            overflow: hidden;
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transform: scaleX(-1);
+        }
+
+        video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+
+        /* Hide video, show canvas */
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        #debug_text {
+            position: absolute;
+            bottom: 5px;
+            left: 5px;
+            color: #ccc;
+            font-family: monospace;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 10;
+            transform: scaleX(-1);
+            /* Un-mirror text */
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <video id="input_video" autoplay playsinline></video>
+        <canvas id="output_canvas" width="320" height="240"></canvas>
+        <div id="debug_text">Init...</div>
+    </div>
+    <script type="module" src="/src/camera/main.ts"></script>
+</body>
+
+</html>

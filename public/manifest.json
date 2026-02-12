@@ -2,25 +2,40 @@
   "manifest_version": 3,
   "name": "SignMeet - Live Avatar",
   "version": "1.0",
-  "permissions": ["activeTab", "scripting"],
-  "host_permissions": ["https://meet.google.com/*"],
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://meet.google.com/*",
+    "http://localhost:3000/*",
+    "http://127.0.0.1:5001/*",
+    "https://cdn.jsdelivr.net/*"
+  ],
   "web_accessible_resources": [
     {
       "resources": [
-        "assets/idle.glb",
-        "assets/hello.glb",
-        "assets/cool.glb",
-        "assets/good.glb",
-        "assets/alright.glb"
+        "assets/*",
+        "assets/mediapipe/*",
+        "camera.html"
       ],
-      "matches": ["<all_urls>"]
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ],
   "content_scripts": [
     {
-      "matches": ["https://meet.google.com/*"],
-      "js": ["assets/content.js"], 
+      "matches": [
+        "https://meet.google.com/*"
+      ],
+      "js": [
+        "assets/content.js"
+      ],
       "run_at": "document_idle"
     }
-  ]
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
+  }
 }

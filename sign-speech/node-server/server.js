@@ -16,10 +16,11 @@ app.use(bodyParser.json({ limit: '10mb' }));
 app.post('/process-sign', async (req, res) => {
     try {
         const { userId, keypoints } = req.body;
-
         if (!userId || !keypoints) {
             return res.status(400).json({ error: "Missing userId or keypoints data" });
         }
+
+
 
         // Forward to Python AI Service
         const pythonResponse = await axios.post(`${PYTHON_SERVICE_URL}/predict`, {

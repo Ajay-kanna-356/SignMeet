@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite build --watch",
-  "build": "vite build",
+    "build": "vite build && vite build --config vite.content.config.ts && vite build --config vite.background.config.ts",
     "preview": "vite preview"
   },
   "repository": {
@@ -21,6 +21,9 @@
   },
   "homepage": "https://github.com/Ajay-kanna-356/SignMeet#readme",
   "dependencies": {
+    "@mediapipe/camera_utils": "^0.3.1675466862",
+    "@mediapipe/drawing_utils": "^0.3.1675466124",
+    "@mediapipe/holistic": "^0.5.1675471629",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
     "@tweenjs/tween.js": "^25.0.0",
