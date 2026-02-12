@@ -1,4 +1,5 @@
 flask
 flask-cors
-tensorflow
+tensorflow==2.19.1
+keras==3.11.3
 numpy
