@@ -66179,8 +66179,27 @@ No matching component was found for:
     sorry: chrome.runtime.getURL("assets/sorry.glb"),
     team: chrome.runtime.getURL("assets/team.glb"),
     technology: chrome.runtime.getURL("assets/technology.glb"),
-    thankyou: chrome.runtime.getURL("assets/thankyou.glb")
+    thankyou: chrome.runtime.getURL("assets/thankyou.glb"),
+    // New words
+    finish: chrome.runtime.getURL("assets/finish.glb"),
+    start: chrome.runtime.getURL("assets/start.glb"),
+    meeting: chrome.runtime.getURL("assets/meeting.glb"),
+    we: chrome.runtime.getURL("assets/we.glb"),
+    you: chrome.runtime.getURL("assets/you.glb"),
+    me: chrome.runtime.getURL("assets/me.glb"),
+    what: chrome.runtime.getURL("assets/what.glb"),
+    tomorrow: chrome.runtime.getURL("assets/tomorrow.glb"),
+    yesterday: chrome.runtime.getURL("assets/yesterday.glb"),
+    no: chrome.runtime.getURL("assets/no.glb"),
+    problem: chrome.runtime.getURL("assets/problem.glb")
+    // help: chrome.runtime.getURL('assets/help.glb'), // DISABLED: help.glb missing from public/assets
   };
+  function getLongestClip(animations) {
+    if (!animations || animations.length === 0) return null;
+    return animations.reduce(
+      (longest, clip) => clip.duration > longest.duration ? clip : longest
+    );
+  }
   const AvatarController = ({ queue, onAnimationFinished }) => {
     const group = reactExports.useRef(null);
     const [currentAnim, setCurrentAnim] = reactExports.useState("idle");
@@ -66198,7 +66217,19 @@ No matching component was found for:
       sorry: useGLTF(MODELS.sorry),
       team: useGLTF(MODELS.team),
       technology: useGLTF(MODELS.technology),
-      thankyou: useGLTF(MODELS.thankyou)
+      thankyou: useGLTF(MODELS.thankyou),
+      finish: useGLTF(MODELS.finish),
+      start: useGLTF(MODELS.start),
+      meeting: useGLTF(MODELS.meeting),
+      we: useGLTF(MODELS.we),
+      you: useGLTF(MODELS.you),
+      me: useGLTF(MODELS.me),
+      what: useGLTF(MODELS.what),
+      tomorrow: useGLTF(MODELS.tomorrow),
+      yesterday: useGLTF(MODELS.yesterday),
+      no: useGLTF(MODELS.no),
+      problem: useGLTF(MODELS.problem)
+      // help: useGLTF(MODELS.help), // DISABLED: help.glb missing
     };
     const animations = reactExports.useMemo(() => {
       const clips = [];
@@ -66211,27 +66242,33 @@ No matching component was found for:
         }
       });
       Object.entries(gltfs).forEach(([name, gltf]) => {
-        const animIndex = name === "hello" || name === "good" || name === "idle" ? 0 : name === "technology" ? 2 : 1;
-        const originalClip = gltf.animations[animIndex] || gltf.animations[0];
-        if (originalClip) {
-          const clip = originalClip.clone();
-          clip.name = name;
-          const newTracks = [];
-          clip.tracks.forEach((track) => {
-            const trackParts = track.name.split(".");
-            const property = trackParts.pop();
-            const boneName = trackParts.join(".");
-            const cleanBoneName = boneName.split(":").pop();
-            const targetBoneName = idleBoneMap.get(cleanBoneName);
-            if (targetBoneName) {
-              track.name = `${targetBoneName}.${property}`;
-              newTracks.push(track);
-            }
-          });
-          clip.tracks = newTracks.filter((t2) => !t2.name.includes("_end"));
-          clips.push(clip);
-          console.log(`[SIGNMEET] Loaded animation "${name}" from index ${animIndex}`);
+        const originalClip = getLongestClip(gltf.animations);
+        if (!originalClip) {
+          console.warn(`[SIGNMEET] No animation found in "${name}.glb". Skipping.`);
+          return;
         }
+        console.log(`[SIGNMEET] "${name}" -> clip "${originalClip.name}" (${originalClip.duration.toFixed(2)}s from ${gltf.animations.length} clips)`);
+        const clip = originalClip.clone();
+        clip.name = name;
+        const newTracks = [];
+        clip.tracks.forEach((track) => {
+          const trackParts = track.name.split(".");
+          const property = trackParts.pop();
+          const boneName = trackParts.join(".");
+          const cleanBoneName = boneName.split(":").pop();
+          const targetBoneName = idleBoneMap.get(cleanBoneName);
+          if (targetBoneName) {
+            track.name = `${targetBoneName}.${property}`;
+            newTracks.push(track);
+          }
+        });
+        clip.tracks = newTracks.filter((t2) => !t2.name.includes("_end"));
+        if (clip.tracks.length === 0) {
+          console.warn(`[SIGNMEET] Retargeting produced 0 tracks for "${name}". Bone names may not match idle skeleton.`);
+          return;
+        }
+        clips.push(clip);
+        console.log(`[SIGNMEET] Loaded animation "${name}" (${clip.tracks.length} tracks)`);
       });
       return clips;
     }, []);
@@ -66254,7 +66291,7 @@ No matching component was found for:
     const playAnimation = (name) => {
       const action = actions[name];
       if (!action) {
-        console.warn(`[SIGNMEET] Missing animation: ${name}`);
+        console.warn(`[SIGNMEET] Missing animation: "${name}". Check that ${name}.glb exists in assets and its bones match the idle skeleton.`);
         return;
       }
       console.log(`[SIGNMEET] playing -> ${name}`);
@@ -66307,7 +66344,28 @@ No matching component was found for:
     "team": "team",
     "group": "team",
     "thank you": "thankyou",
-    "thanks": "thankyou"
+    "thanks": "thankyou",
+    // Newly added
+    "finish": "finish",
+    "end": "finish",
+    "complete": "finish",
+    "start": "start",
+    "begin": "start",
+    "meeting": "meeting",
+    "meet": "meeting",
+    "we": "we",
+    "us": "we",
+    "you": "you",
+    "me": "me",
+    "i": "me",
+    "what": "what",
+    "tomorrow": "tomorrow",
+    "yesterday": "yesterday",
+    // 'help': 'help', 'assist': 'help', // DISABLED: help.glb missing from public/assets — add the file to re-enable
+    "no": "no",
+    "not": "no",
+    "problem": "problem",
+    "issue": "problem"
   };
   class SpeechManager {
     constructor(onQueueUpdate) {
@@ -66614,7 +66672,7 @@ No matching component was found for:
                 fontWeight: "bold",
                 transition: "0.2s all"
               },
-              children: "Speech-Impaired Mode"
+              children: "Listening Mode"
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -66625,7 +66683,7 @@ No matching component was found for:
                 flex: 1,
                 padding: "12px 8px",
                 borderRadius: "8px",
-                background: mode === "NORMAL" ? "#0f0" : "#222",
+                background: mode === "NORMAL" ? "rgb(186, 217, 246)" : "#222",
                 color: mode === "NORMAL" ? "#000" : "#fff",
                 border: "none",
                 cursor: "pointer",
@@ -66633,7 +66691,7 @@ No matching component was found for:
                 fontWeight: "bold",
                 transition: "0.2s all"
               },
-              children: "Normal Mode"
+              children: "Speaking mode"
             }
           )
         ] }),

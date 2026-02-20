@@ -5,13 +5,34 @@ const DICTIONARY: Record<string, string> = {
   'cool': 'cool', 'awesome': 'cool',
   'good': 'good', 'great': 'good',
   'alright': 'alright', 'ok': 'alright', 'okay': 'alright',
+
   'technology': 'technology', 'tech': 'technology',
   'job': 'job', 'work': 'job',
   'new': 'new', 'fresh': 'new',
   'secretary': 'secretary', 'assistant': 'secretary',
+
   'sorry': 'sorry', 'apologize': 'sorry', 'apology': 'sorry',
   'team': 'team', 'group': 'team',
   'thank you': 'thankyou', 'thanks': 'thankyou',
+
+  // Newly added
+  'finish': 'finish', 'end': 'finish', 'complete': 'finish',
+  'start': 'start', 'begin': 'start',
+  'meeting': 'meeting', 'meet': 'meeting',
+
+  'we': 'we', 'us': 'we',
+  'you': 'you',
+  'me': 'me', 'i': 'me',
+
+  'what': 'what',
+
+  'tomorrow': 'tomorrow',
+  'yesterday': 'yesterday',
+
+  // 'help': 'help', 'assist': 'help', // DISABLED: help.glb missing from public/assets — add the file to re-enable
+  'no': 'no', 'not': 'no',
+
+  'problem': 'problem', 'issue': 'problem',
 };
 
 export class SpeechManager {
@@ -32,7 +53,7 @@ export class SpeechManager {
 
     // 2. Split into words immediately
     const currentWords = cleanSentence.split(/\s+/);
-    
+
     // 3. Find the divergence point
     // We compare the new word list with the old one index by index.
     // As soon as we find a mismatch, we consider everything from that point onwards as "new".
@@ -56,7 +77,7 @@ export class SpeechManager {
 
     // 5. Process the new words for animations
     const newAnims: string[] = [];
-    
+
     newWords.forEach(word => {
       if (DICTIONARY[word]) {
         newAnims.push(DICTIONARY[word]);
@@ -65,11 +86,11 @@ export class SpeechManager {
 
     if (newAnims.length > 0) {
       console.log(`[SIGNMEET] Match Found: ${newAnims.join(', ')}`);
-      
+
       // CRITICAL FIX: Do not append to history. Only send the new batch.
       // The AvatarController maintains its own internal playlist, so we 
       // just need to feed it the new items.
-      this.queue = newAnims; 
+      this.queue = newAnims;
       this.onQueueChange(this.queue);
     }
   }

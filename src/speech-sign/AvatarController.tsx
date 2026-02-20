@@ -18,9 +18,30 @@ const MODELS = {
   team: chrome.runtime.getURL('assets/team.glb'),
   technology: chrome.runtime.getURL('assets/technology.glb'),
   thankyou: chrome.runtime.getURL('assets/thankyou.glb'),
-
-
+  // New words
+  finish: chrome.runtime.getURL('assets/finish.glb'),
+  start: chrome.runtime.getURL('assets/start.glb'),
+  meeting: chrome.runtime.getURL('assets/meeting.glb'),
+  we: chrome.runtime.getURL('assets/we.glb'),
+  you: chrome.runtime.getURL('assets/you.glb'),
+  me: chrome.runtime.getURL('assets/me.glb'),
+  what: chrome.runtime.getURL('assets/what.glb'),
+  tomorrow: chrome.runtime.getURL('assets/tomorrow.glb'),
+  yesterday: chrome.runtime.getURL('assets/yesterday.glb'),
+  no: chrome.runtime.getURL('assets/no.glb'),
+  problem: chrome.runtime.getURL('assets/problem.glb'),
+  // help: chrome.runtime.getURL('assets/help.glb'), // DISABLED: help.glb missing from public/assets
 };
+
+// Always pick the animation clip with the longest duration.
+// This avoids guessing indices — T-pose/setup clips are always short (~0.5s),
+// and the actual sign animation is always the longest one in the file.
+function getLongestClip(animations: THREE.AnimationClip[]): THREE.AnimationClip | null {
+  if (!animations || animations.length === 0) return null;
+  return animations.reduce((longest, clip) =>
+    clip.duration > longest.duration ? clip : longest
+  );
+}
 
 export const AvatarController = ({ queue, onAnimationFinished }: any) => {
   const group = useRef<THREE.Group>(null);
@@ -42,6 +63,18 @@ export const AvatarController = ({ queue, onAnimationFinished }: any) => {
     team: useGLTF(MODELS.team),
     technology: useGLTF(MODELS.technology),
     thankyou: useGLTF(MODELS.thankyou),
+    finish: useGLTF(MODELS.finish),
+    start: useGLTF(MODELS.start),
+    meeting: useGLTF(MODELS.meeting),
+    we: useGLTF(MODELS.we),
+    you: useGLTF(MODELS.you),
+    me: useGLTF(MODELS.me),
+    what: useGLTF(MODELS.what),
+    tomorrow: useGLTF(MODELS.tomorrow),
+    yesterday: useGLTF(MODELS.yesterday),
+    no: useGLTF(MODELS.no),
+    problem: useGLTF(MODELS.problem),
+    // help: useGLTF(MODELS.help), // DISABLED: help.glb missing
   };
 
   // 2. Prepare Animations (The "Nuclear" Retargeting)
@@ -53,42 +86,50 @@ export const AvatarController = ({ queue, onAnimationFinished }: any) => {
     const idleBoneMap = new Map<string, string>();
     idleScene.traverse((obj) => {
       if (obj.type === 'Bone') {
-        const cleanName = obj.name.split(':').pop(); 
+        const cleanName = obj.name.split(':').pop();
         if (cleanName) idleBoneMap.set(cleanName, obj.name);
       }
     });
 
     Object.entries(gltfs).forEach(([name, gltf]) => {
-      // 🛠️ FIX: Select the correct animation index
-      // 'hello' and 'idle' usually have the motion at index 0.
-      // 'cool', 'good', and 'alright' have the motion at index 1.
-      const animIndex =(name === 'hello' || name === 'good' || name === 'idle') ? 0: (name === 'technology') ? 2: 1;
+      // Automatically pick the longest clip — sign animations are always longer
+      // than T-pose/setup clips (~0.5s). This removes all index guessing.
+      const originalClip = getLongestClip(gltf.animations);
 
-      const originalClip = gltf.animations[animIndex] || gltf.animations[0];
-
-      if (originalClip) {
-        const clip = originalClip.clone();
-        clip.name = name;
-
-        // Retarget tracks to match Idle skeleton names
-        const newTracks: THREE.KeyframeTrack[] = [];
-        clip.tracks.forEach((track) => {
-          const trackParts = track.name.split('.');
-          const property = trackParts.pop();
-          const boneName = trackParts.join('.');
-          const cleanBoneName = boneName.split(':').pop();
-          const targetBoneName = idleBoneMap.get(cleanBoneName!);
-
-          if (targetBoneName) {
-            track.name = `${targetBoneName}.${property}`;
-            newTracks.push(track);
-          }
-        });
-
-        clip.tracks = newTracks.filter((t) => !t.name.includes('_end'));
-        clips.push(clip);
-        console.log(`[SIGNMEET] Loaded animation "${name}" from index ${animIndex}`);
+      if (!originalClip) {
+        console.warn(`[SIGNMEET] No animation found in "${name}.glb". Skipping.`);
+        return;
       }
+
+      console.log(`[SIGNMEET] "${name}" -> clip "${originalClip.name}" (${originalClip.duration.toFixed(2)}s from ${gltf.animations.length} clips)`);
+
+      const clip = originalClip.clone();
+      clip.name = name;
+
+      // Retarget tracks to match Idle skeleton names
+      const newTracks: THREE.KeyframeTrack[] = [];
+      clip.tracks.forEach((track) => {
+        const trackParts = track.name.split('.');
+        const property = trackParts.pop();
+        const boneName = trackParts.join('.');
+        const cleanBoneName = boneName.split(':').pop();
+        const targetBoneName = idleBoneMap.get(cleanBoneName!);
+
+        if (targetBoneName) {
+          track.name = `${targetBoneName}.${property}`;
+          newTracks.push(track);
+        }
+      });
+
+      clip.tracks = newTracks.filter((t) => !t.name.includes('_end'));
+
+      if (clip.tracks.length === 0) {
+        console.warn(`[SIGNMEET] Retargeting produced 0 tracks for "${name}". Bone names may not match idle skeleton.`);
+        return;
+      }
+
+      clips.push(clip);
+      console.log(`[SIGNMEET] Loaded animation "${name}" (${clip.tracks.length} tracks)`);
     });
 
     return clips;
@@ -100,7 +141,7 @@ export const AvatarController = ({ queue, onAnimationFinished }: any) => {
   useEffect(() => {
     if (queue.length > 0) {
       queue.forEach((word: string) => internalQueue.current.push(word));
-      onAnimationFinished(); 
+      onAnimationFinished();
     }
   }, [queue, onAnimationFinished]);
 
@@ -111,7 +152,7 @@ export const AvatarController = ({ queue, onAnimationFinished }: any) => {
     if (internalQueue.current.length > 0) {
       const nextWord = internalQueue.current.shift()!;
       playAnimation(nextWord);
-    } 
+    }
     else if (currentAnim !== 'idle') {
       playIdle();
     }
@@ -120,22 +161,19 @@ export const AvatarController = ({ queue, onAnimationFinished }: any) => {
   const playAnimation = (name: string) => {
     const action = actions[name];
     if (!action) {
-      console.warn(`[SIGNMEET] Missing animation: ${name}`);
+      console.warn(`[SIGNMEET] Missing animation: "${name}". Check that ${name}.glb exists in assets and its bones match the idle skeleton.`);
       return;
     }
 
     console.log(`[SIGNMEET] playing -> ${name}`);
     isPlaying.current = true;
 
-    // Hard Reset strategy (Most reliable for distinct clips)
     mixer.stopAllAction();
-    
+
     action.reset();
     action.setLoop(THREE.LoopOnce, 1);
     action.clampWhenFinished = true;
-    
-    // Quick fade in to prevent popping
-    action.fadeIn(0.1); 
+    action.fadeIn(0.1);
     action.play();
 
     setCurrentAnim(name);
@@ -152,16 +190,15 @@ export const AvatarController = ({ queue, onAnimationFinished }: any) => {
 
   const playIdle = () => {
     if (!actions.idle) return;
-    
+
     console.log("[SIGNMEET] fading to idle");
     setCurrentAnim('idle');
 
-    // Fade into idle
     actions.idle.reset().fadeIn(0.2).play();
   };
 
   return (
-    <group ref={group} position={[0, -1.3, 0]} scale={1.0}> 
+    <group ref={group} position={[0, -1.3, 0]} scale={1.0}>
       {/* IMPORTANT: We render the IDLE scene. All animations map to THIS skeleton. */}
       <primitive object={gltfs.idle.scene} />
     </group>

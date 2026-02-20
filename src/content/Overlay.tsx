@@ -146,19 +146,19 @@ export const Overlay = () => {
               transition: '0.2s all'
             }}
           >
-            Speech-Impaired Mode
+            Listening Mode
           </button>
           <button
             onClick={() => setMode(mode === 'NORMAL' ? 'OFF' : 'NORMAL')}
             style={{
               flex: 1, padding: '12px 8px', borderRadius: '8px',
-              background: mode === 'NORMAL' ? '#0f0' : '#222',
+              background: mode === 'NORMAL' ? 'rgb(186, 217, 246)' : '#222',
               color: mode === 'NORMAL' ? '#000' : '#fff',
               border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold',
               transition: '0.2s all'
             }}
           >
-            Normal Mode
+            Speaking mode
           </button>
         </div>
 
