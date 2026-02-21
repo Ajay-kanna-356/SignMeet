@@ -20,6 +20,7 @@ export default defineConfig({
     build: {
         outDir: 'dist',
         emptyOutDir: false, // Don't wipe dist (assuming main build runs first or we manage order)
+        copyPublicDir: false, // build:camera already copies public/ to dist/ — skip it here to avoid Windows file-lock (EPERM) on large .glb files
         minify: false,
         lib: {
             entry: path.resolve(__dirname, 'src/content/index.tsx'),
