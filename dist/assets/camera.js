@@ -5476,17 +5476,21 @@ class CameraController {
     }
   }
   extractKeypoints(results) {
-    let lh = new Array(21 * 3).fill(0);
-    let rh = new Array(21 * 3).fill(0);
-    if (results.leftHandLandmarks) {
-      lh = [];
-      for (const lm of results.leftHandLandmarks) lh.push(lm.x, lm.y, lm.z);
-    }
-    if (results.rightHandLandmarks) {
-      rh = [];
-      for (const lm of results.rightHandLandmarks) rh.push(lm.x, lm.y, lm.z);
-    }
-    return [...lh, ...rh];
+    const features = new Array(126).fill(0);
+    let handIndex = 0;
+    const addHand = (landmarks) => {
+      if (handIndex >= 2) return;
+      for (let i = 0; i < 21; i++) {
+        const lm = landmarks[i];
+        features[handIndex * 63 + i * 3] = lm.x;
+        features[handIndex * 63 + i * 3 + 1] = lm.y;
+        features[handIndex * 63 + i * 3 + 2] = lm.z;
+      }
+      handIndex++;
+    };
+    if (results.rightHandLandmarks) addHand(results.rightHandLandmarks);
+    if (results.leftHandLandmarks) addHand(results.leftHandLandmarks);
+    return features;
   }
   async sendKeypoints(keypoints) {
     try {
@@ -5496,15 +5500,15 @@ class CameraController {
         body: JSON.stringify({ userId: this.USER_ID, keypoints })
       });
       const data = await response.json();
-      if (data.word) {
-        console.log("[SIGNMEET] 🎯 DETECTED:", data.word);
-        this.debugText.innerText = data.word;
-        this.debugText.style.color = "#0f0";
-        window.parent.postMessage({ type: "SIGN_PREDICTION", word: data.word }, "*");
-      } else if (data.buffer_length !== void 0) {
-        this.debugText.innerText = `Buffer: ${data.buffer_length}`;
-        this.debugText.style.color = "#aaa";
-      }
+      let displayText = "";
+      if (data.current_prediction) displayText += `${data.current_prediction}
+`;
+      if (data.words) displayText += `${data.words}
+`;
+      if (data.sentence) displayText += `${data.sentence}`;
+      this.debugText.innerText = displayText;
+      this.debugText.style.color = "#0f0";
+      this.debugText.style.whiteSpace = "pre-wrap";
     } catch (err) {
       this.debugText.innerText = "Err";
       this.debugText.style.color = "red";

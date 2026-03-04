@@ -70,30 +70,31 @@
 
         const USER_ID = "test_user_1";
         let lastSent = 0;
+        let isSending = false;
         const SEND_INTERVAL = 75; // 75ms = 7.5fps
 
         // Helper: flattened array of landmarks (x, y, z)
         function extractKeypoints(results) {
-            // Order must match Python: Left Hand (63) + Right Hand (63) = 126
+            // Replicating Python's vision.HandLandmarker behavior (puts hands sequentially, no rigid left/right)
+            const features = new Array(126).fill(0);
+            let handIndex = 0;
 
-            let lh = new Array(21 * 3).fill(0);
-            let rh = new Array(21 * 3).fill(0);
-
-            if (results.leftHandLandmarks) {
-                lh = [];
-                for (let lm of results.leftHandLandmarks) {
-                    lh.push(lm.x, lm.y, lm.z);
+            const addHand = (landmarks) => {
+                if (handIndex >= 2) return;
+                for (let i = 0; i < 21; i++) {
+                    const lm = landmarks[i];
+                    features[handIndex * 63 + i * 3] = lm.x;
+                    features[handIndex * 63 + i * 3 + 1] = lm.y;
+                    features[handIndex * 63 + i * 3 + 2] = lm.z;
                 }
-            }
+                handIndex++;
+            };
 
-            if (results.rightHandLandmarks) {
-                rh = [];
-                for (let lm of results.rightHandLandmarks) {
-                    rh.push(lm.x, lm.y, lm.z);
-                }
-            }
+            // Mimicking the dominance / generic indexing.
+            if (results.rightHandLandmarks) addHand(results.rightHandLandmarks);
+            if (results.leftHandLandmarks) addHand(results.leftHandLandmarks);
 
-            return [...lh, ...rh];
+            return features;
         }
 
         async function onResults(results) {
@@ -103,15 +104,19 @@
             ctx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
             // Draw Connectors (Optional, for visual feedback)
-            drawConnectors(ctx, results.leftHandLandmarks, HAND_CONNECTIONS, { color: '#CC0000', lineWidth: 2 });
-            drawLandmarks(ctx, results.leftHandLandmarks, { color: '#00FF00', lineWidth: 1 });
-            drawConnectors(ctx, results.rightHandLandmarks, HAND_CONNECTIONS, { color: '#00CC00', lineWidth: 2 });
-            drawLandmarks(ctx, results.rightHandLandmarks, { color: '#FF0000', lineWidth: 1 });
+            if (results.leftHandLandmarks) {
+                drawConnectors(ctx, results.leftHandLandmarks, HAND_CONNECTIONS, { color: '#CC0000', lineWidth: 2 });
+                drawLandmarks(ctx, results.leftHandLandmarks, { color: '#00FF00', lineWidth: 1 });
+            }
+            if (results.rightHandLandmarks) {
+                drawConnectors(ctx, results.rightHandLandmarks, HAND_CONNECTIONS, { color: '#00CC00', lineWidth: 2 });
+                drawLandmarks(ctx, results.rightHandLandmarks, { color: '#FF0000', lineWidth: 1 });
+            }
             ctx.restore();
 
             // Send Data (Throttled)
             const now = Date.now();
-            if (now - lastSent > SEND_INTERVAL) {
+            if (now - lastSent > SEND_INTERVAL && !isSending) {
                 lastSent = now;
                 const keypoints = extractKeypoints(results);
                 sendKeypoints(keypoints);
@@ -143,6 +148,7 @@
         camera.start();
 
         async function sendKeypoints(keypoints) {
+            isSending = true;
             try {
                 const response = await fetch('http://localhost:3000/process-sign', {
                     method: 'POST',
@@ -155,18 +161,23 @@
 
                 const data = await response.json();
 
-                if (data.word) {
-                    output.innerText = "DETECTED: " + data.word;
-                    output.style.color = "#00ff00";
-                    setTimeout(() => output.style.color = "#fff", 500);
-                }
+                let displayText = "";
+                if (data.current_prediction) displayText += `${data.current_prediction}\n`;
+                if (data.words) displayText += `${data.words}\n`;
+                if (data.sentence) displayText += `${data.sentence}`;
 
-                if (data.buffer_length !== undefined) {
-                    bufferDisplay.innerText = `Buffer: ${data.buffer_length} frames`;
-                }
+                output.innerText = displayText;
+                output.style.color = "#00ff00";
+                output.style.whiteSpace = "pre-wrap"; // For newlines
+                output.style.textAlign = "left"; // Make it read like cv2.putText
+
+                // Hide buffer display
+                bufferDisplay.style.display = "none";
 
             } catch (err) {
                 console.error("Server Error:", err);
+            } finally {
+                isSending = false;
             }
         }
 

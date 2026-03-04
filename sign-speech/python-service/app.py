@@ -1,44 +1,137 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-# import cv2 # Not needed
-# import mediapipe as mp # Not needed
+import os
 import numpy as np
 import tensorflow as tf
-# import base64 # Not needed
-import os
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import threading
+import pyttsx3
+from queue import Queue
+from groq import Groq
+import pythoncom
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
-CORS(app) 
+CORS(app)
 
-# --- 1. CONFIGURATION (MATCHING YOUR NOTEBOOK) ---
-MODEL_PATH = '../best_model_60_frames.h5'  # Pointing to the model from code.ipynb
-TARGET_LENGTH = 60                   # Notebook used 90 frames, so we must use 90
-THRESHOLD = 0.85
+# --- 1. CONFIGURATION ---
+MODEL_PATH = '../transformer/isl_transformer_best.keras'
+TARGET_LENGTH = 20
+CONFIDENCE_THRESHOLD = 0.99
+SEND_GESTURE = "send"
+SMOOTH_BUFFER = 5
+CONFIRMATION_FRAMES = 7
 
-# --- 2. EXACT LABEL MAPPING FROM NOTEBOOK ---
-# The model outputs probabilities for 0-10. We must map them back to words.
-# Order found in code.ipynb output: {'alright': 0, 'cool': 1, 'good': 2, ...}
-ACTIONS = np.array([
-    'alright',      # 0
-    'cool',         # 1
-    'good',         # 2
-    'hello',        # 3
-    'job',          # 4
-    'new',          # 5
-    'secretary',    # 6
-    'sorry',        # 7
-    'Team',         # 8
-    'Technology',   # 9
-    'thankyou'      # 10
-])
+CLASS_NAMES = [
+    "alright", "cool", "finish", "good", "hello", "help", "job", "me", "meeting", "new",
+    "no", "now", "problem", "secretary", "send", "sorry", "start", "team", "technology", "thank you",
+    "tomorrow", "wait", "we", "what", "yesterday", "you"
+]
 
-# --- 3. LOAD MODEL ---
+# --- POSITIONAL ENCODING ---
+class PositionalEncoding(tf.keras.layers.Layer):
+    def __init__(self, max_len, d_model, **kwargs):
+        super(PositionalEncoding, self).__init__(**kwargs)
+        self.max_len = max_len
+        self.d_model = d_model
+        pos = tf.cast(tf.range(max_len)[:, tf.newaxis], tf.float32)
+        i = tf.cast(tf.range(d_model)[tf.newaxis, :], tf.float32)
+        angle_rates = 1.0 / tf.pow(10000.0, (2.0 * tf.floor(i / 2.0)) / tf.cast(d_model, tf.float32))
+        angle_rads = pos * angle_rates
+        sines = tf.sin(angle_rads[:, 0::2])
+        cosines = tf.cos(angle_rads[:, 1::2])
+        pos_encoding = tf.concat([sines, cosines], axis=-1)
+        self.pos_encoding = pos_encoding[tf.newaxis, ...]
+
+    def call(self, x):
+        return x + self.pos_encoding[:, :tf.shape(x)[1], :]
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "max_len": self.max_len,
+            "d_model": self.d_model
+        })
+        return config
+
+# --- GROQ & TTS SETUP ---
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+def gloss_to_sentence(gloss):
+    prompt = f"""
+Convert this sign language gloss into a natural English sentence.
+Return ONLY the sentence.use only tenses and fillers extra simple.
+
+Gloss: {gloss}
+
+Sentence:
+"""
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Groq API Error: {e}")
+        return gloss
+
+tts_queue = Queue()
+
+def tts_worker():
+    pythoncom.CoInitialize()  # Required for Windows COM threads
+    while True:
+        text = tts_queue.get()
+        if text is None:
+            break
+        try:
+            engine = pyttsx3.init()
+            engine.setProperty('rate', 160)
+            engine.say(text)
+            engine.runAndWait()
+            del engine
+        except Exception as e:
+            print(f"TTS error: {e}")
+        tts_queue.task_done()
+
+threading.Thread(target=tts_worker, daemon=True).start()
+
+def speak(text):
+    tts_queue.put(text)
+
+# --- LOAD MODEL ---
 print(f"Loading Model: {MODEL_PATH}...")
-model = tf.keras.models.load_model(MODEL_PATH)
+model = tf.keras.models.load_model(
+    MODEL_PATH,
+    custom_objects={"PositionalEncoding": PositionalEncoding}
+)
 print("Model Loaded.")
 
-# --- 4. SESSION MANAGEMENT ---
+# --- WARMUP MODEL ---
+print("Warming up model to prevent slow first-prediction deadlock...")
+dummy_input = np.zeros((1, TARGET_LENGTH, 126), dtype=np.float32)
+model(dummy_input, training=False)
+print("Model warmed up successfully.")
+
+# --- SESSION MANAGEMENT ---
 user_sessions = {}
+# Global lock to prevent deadlocks when multiple flask threads call model.predict simultaneously
+prediction_lock = threading.Lock()
+
+def process_sentence_thread(user_id, words_copy):
+    gloss = " ".join(words_copy)
+    print("\nGloss:", gloss)
+    sentence = gloss_to_sentence(gloss)
+    print("Sentence:", sentence)
+    
+    speak(sentence)
+    
+    if user_id in user_sessions:
+        user_sessions[user_id]["final_sentence"] = sentence
+        # Leave processing true until we are completely done updating
+        user_sessions[user_id]["processing"] = False
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -49,59 +142,94 @@ def predict():
     if not user_id or keypoints is None:
         return jsonify({"error": "Missing data"}), 400
         
-    # Validation: Ensure 126 keypoints (21*3 LH + 21*3 RH)
     if len(keypoints) != 126:
-        # If client sends 0s or empty, it might be fine, but model expects 126.
-        # Just in case client implementation varies, let's just log and zero pad if needed or fail.
-        # But for now assume client is correct.
         pass
 
-    # Initialize session
     if user_id not in user_sessions:
         user_sessions[user_id] = {
             "sequence": [],
-            "predictions": [] 
+            "prediction_buffer": [],
+            "collected_words": [],
+            "candidate_word": None,
+            "candidate_count": 0,
+            "last_confirmed_word": None,
+            "processing": False,
+            "final_sentence": ""
         }
     
     session = user_sessions[user_id]
-
-    # 1. Add to Buffer
     session["sequence"].append(keypoints)
 
-    response_word = None
-    
-    # 2. Prediction Logic (Sliding Window)
-    if len(session["sequence"]) >= TARGET_LENGTH:
-        # Take the LAST 60 frames for prediction
-        window = session["sequence"][-TARGET_LENGTH:]
+    if len(session["sequence"]) > TARGET_LENGTH:
+        session["sequence"].pop(0)
 
-        # Predict
-        input_data = np.expand_dims(window, axis=0) # Shape: (1, 60, 126)
-        res = model.predict(input_data)[0]
-        best_guess_index = np.argmax(res)
-        confidence = res[best_guess_index]
+    prediction_text = ""
+    confidence = 0.0
+    
+    if len(session["sequence"]) == TARGET_LENGTH:
+        input_data = np.expand_dims(session["sequence"], axis=0) # Shape: (1, 20, 126)
         
-        # Stability Check
-        session["predictions"].append(best_guess_index)
-        if len(session["predictions"]) > 5:
-            session["predictions"] = session["predictions"][-5:]
+        # Thread-safe prediction execution
+        with prediction_lock:
+            prediction = model(input_data, training=False).numpy()
             
-        is_stable = np.all(np.array(session["predictions"]) == best_guess_index)
+        class_index = np.argmax(prediction)
+        confidence = float(prediction[0][class_index])
+        raw_prediction = CLASS_NAMES[class_index]
         
-        if is_stable and confidence > THRESHOLD:
-            raw_word = ACTIONS[best_guess_index]
-            response_word = raw_word
+        # Smoothing
+        session["prediction_buffer"].append(raw_prediction)
+        if len(session["prediction_buffer"]) > SMOOTH_BUFFER:
+            session["prediction_buffer"].pop(0)
             
-            # Flush buffer
-            session["sequence"] = [] 
-            session["predictions"] = []
-        else:
-            # Slide window: Keep the last 59 frames so appending next one makes 60
-            session["sequence"] = session["sequence"][-(TARGET_LENGTH-1):]
+        prediction_text = max(set(session["prediction_buffer"]), key=session["prediction_buffer"].count)
+        
+        # Command / Send Gesture handling
+        if prediction_text.lower() == SEND_GESTURE and confidence > 0.85:
+            if session["collected_words"] and not session["processing"]:
+                session["processing"] = True
+                
+                # Start processing thread
+                threading.Thread(
+                    target=process_sentence_thread,
+                    args=(user_id, session["collected_words"].copy()),
+                    daemon=True
+                ).start()
+                
+                session["final_sentence"] = "Processing..."
+                session["sequence"].clear()
+                session["prediction_buffer"].clear()
+                session["candidate_word"] = None
+                session["candidate_count"] = 0
+                session["last_confirmed_word"] = None
+                session["collected_words"].clear()
+                
+        # Confirmation logic for collecting words
+        elif confidence >= CONFIDENCE_THRESHOLD:
+            if prediction_text == session["candidate_word"]:
+                session["candidate_count"] += 1
+            else:
+                session["candidate_word"] = prediction_text
+                session["candidate_count"] = 1
+                
+            if session["candidate_count"] >= CONFIRMATION_FRAMES:
+                if session["last_confirmed_word"] != session["candidate_word"]:
+                    session["collected_words"].append(session["candidate_word"])
+                    session["last_confirmed_word"] = session["candidate_word"]
+                    
+                    # Log internally
+                    print(f"Stored: {session['candidate_word']}")
+                    
+                    # Reset buffers to prevent re-triggering the same word quickly
+                    session["sequence"].clear()
+                    session["prediction_buffer"].clear()
+                    
+                session["candidate_count"] = 0
 
     return jsonify({
-        "word": response_word,
-        "buffer_length": len(session["sequence"])
+        "current_prediction": f"{prediction_text} ({confidence:.2f})" if prediction_text else "",
+        "words": "Words: " + " ".join(session["collected_words"]),
+        "sentence": "Sentence: " + session["final_sentence"]
     })
 
 @app.route('/reset', methods=['POST'])
@@ -109,8 +237,15 @@ def reset():
     data = request.json
     user_id = data.get('userId')
     if user_id in user_sessions:
-        user_sessions[user_id]["sequence"] = []
-        user_sessions[user_id]["predictions"] = []
+        session = user_sessions[user_id]
+        session["sequence"].clear()
+        session["prediction_buffer"].clear()
+        session["collected_words"].clear()
+        session["candidate_word"] = None
+        session["candidate_count"] = 0
+        session["last_confirmed_word"] = None
+        session["processing"] = False
+        session["final_sentence"] = ""
     return jsonify({"status": "cleared"})
 
 if __name__ == '__main__':

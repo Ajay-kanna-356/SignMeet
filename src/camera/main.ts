@@ -10,6 +10,7 @@ export class CameraController {
     private ctx: CanvasRenderingContext2D;
     private isProcessing = false;
     private lastSent = 0;
+    private isSending = false;
     private readonly SEND_INTERVAL = 100;
     private readonly USER_ID = "extension_user_" + Math.floor(Math.random() * 1000);
     private animationFrameId: number | null = null;
@@ -103,7 +104,7 @@ export class CameraController {
 
         // Send to Backend
         const now = Date.now();
-        if (now - this.lastSent > this.SEND_INTERVAL) {
+        if (now - this.lastSent > this.SEND_INTERVAL && !this.isSending) {
             this.lastSent = now;
             const keypoints = this.extractKeypoints(results);
             this.sendKeypoints(keypoints);
@@ -111,22 +112,32 @@ export class CameraController {
     }
 
     private extractKeypoints(results: Results): number[] {
-        let lh = new Array(21 * 3).fill(0);
-        let rh = new Array(21 * 3).fill(0);
+        // We replicate Python's vision.HandLandmarker behavior here.
+        // It outputs hands sequentially rather than rigidly left/right.
+        const features = new Array(126).fill(0);
+        let handIndex = 0;
 
-        if (results.leftHandLandmarks) {
-            lh = [];
-            for (const lm of results.leftHandLandmarks) lh.push(lm.x, lm.y, lm.z);
-        }
-        if (results.rightHandLandmarks) {
-            rh = [];
-            for (const lm of results.rightHandLandmarks) rh.push(lm.x, lm.y, lm.z);
-        }
+        const addHand = (landmarks: any[]) => {
+            if (handIndex >= 2) return;
+            for (let i = 0; i < 21; i++) {
+                const lm = landmarks[i];
+                features[handIndex * 63 + i * 3] = lm.x;
+                features[handIndex * 63 + i * 3 + 1] = lm.y;
+                features[handIndex * 63 + i * 3 + 2] = lm.z;
+            }
+            handIndex++;
+        };
 
-        return [...lh, ...rh];
+        // Mirror Python's priority: it grabs whichever hand is most prominent.
+        // In local webcams with holistic, we just take anything present.
+        if (results.rightHandLandmarks) addHand(results.rightHandLandmarks);
+        if (results.leftHandLandmarks) addHand(results.leftHandLandmarks);
+
+        return features;
     }
 
     private async sendKeypoints(keypoints: number[]) {
+        this.isSending = true;
         try {
             const response = await fetch('http://localhost:3000/process-sign', {
                 method: 'POST',
@@ -135,21 +146,26 @@ export class CameraController {
             });
             const data = await response.json();
 
-            if (data.word) {
-                console.log("[SIGNMEET] 🎯 DETECTED:", data.word);
-                this.debugText.innerText = data.word;
-                this.debugText.style.color = "#0f0";
+            // Replicate CV2 putText on the screen overlay
+            let displayText = "";
+            if (data.current_prediction) displayText += `${data.current_prediction}\n`;
+            if (data.words) displayText += `${data.words}\n`;
+            if (data.sentence) displayText += `${data.sentence}`;
 
-                // POST MESSAGE TO PARENT (Content Script)
-                window.parent.postMessage({ type: 'SIGN_PREDICTION', word: data.word }, '*');
+            this.debugText.innerText = displayText;
+            this.debugText.style.color = "#0f0";
+            this.debugText.style.whiteSpace = "pre-wrap"; // Keep newlines
 
-            } else if (data.buffer_length !== undefined) {
-                this.debugText.innerText = `Buffer: ${data.buffer_length}`;
-                this.debugText.style.color = "#aaa";
-            }
+            // Note: Not constantly POSTing to Avatar for every single word anymore.
+            // If the user wants the avatar to animate, we would send it here. But per request:
+            // "dont convert it to audio for every word detection"
+            // And now app.py natively speaks the output anyway using TTS!
+
         } catch (err) {
             this.debugText.innerText = "Err";
             this.debugText.style.color = "red";
+        } finally {
+            this.isSending = false;
         }
     }
 }
