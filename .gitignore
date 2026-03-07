@@ -3,3 +3,12 @@ dist/
 .env
 __pycache__/
 *.pyc
+
+# Standard additions for a clean repo
+*.log
+.DS_Store
+.vscode/
+.idea/
+venv/
+env/
+.venv/

@@ -1,113 +1,120 @@
 # SignMeet - Real-Time ISL Communication Platform
 
-SignMeet is a powerful Google Meet extension designed to bridge the gap between sign language users and non-signers. It provides two-way communication:
-1.  **Sign-to-Speech (Normal Mode)**: Recognizes sign language gestures via webcam and converts them to spoken text for the meeting.
-2.  **Speech-to-Sign (Speech-Impaired Mode)**: Listens to meeting captions and animates a 3D avatar to sign the conversation in real-time.
+SignMeet is a powerful Google Meet extension designed to bridge the gap between sign language users and non-signers. It provides two-way communication directly within your browser:
+
+1. **Sign-to-Speech (Speaking Mode)**: Recognizes Indian Sign Language (ISL) gestures via webcam in real-time, converts them to sentences using the Groq API (LLaMA 3.3), and speaks the text aloud using Text-to-Speech to the meeting participants.
+2. **Speech-to-Sign (Listening Mode)**: Actively listens to meeting captions from Google Meet and animates a high-quality 3D avatar to sign the conversation in real-time.
 
 ---
 
-## 🚀 Features
+## 🚀 Key Features
 
--   **Real-time Sign Detection**: Uses MediaPipe Holistic implementation for accurate hand/body tracking.
--   **3D Avatar**: High-quality 3D avatar that translates spoken words into Indian Sign Language (ISL) gestures.
--   **Text-to-Speech**: Automatically speaks recognized signs aloud to participants.
--   **Seamless Integration**: Operates directly within the Google Meet interface as an overlay.
--   **Privacy Focused**: Camera processing runs locally in a secure sandbox; only keypoints are sent to the backend.
+- **Real-Time Sign Recognition**: Uses MediaPipe Holistic for accurate hand tracking and a custom Keras Transformer model to recognize sequences of ISL glosses.
+- **LLM-Powered Sentence Generation**: Converts isolated signed glosses into natural English sentences using the ultra-fast Groq API.
+- **3D Avatar Translation**: Dynamically loads and blends `.glb` animations to translate spoken English into ISL signs for deaf/hard-of-hearing users.
+- **Seamless Meet Integration**: Operates directly within the Google Meet interface as a non-intrusive UI overlay.
+- **Privacy Focused**: MediaPipe camera inference runs safely sandboxed within the browser extension; only anonymized lightweight coordinate arrays (keypoints) are sent to the local AI backend.
 
 ---
 
-## 🛠️ Installation Guide
+## 🏗️ Architecture & Data Flow
 
-The project consists of three parts:
-1.  **Chrome Extension** (Frontend)
-2.  **AI Service** (Python Backend for Sign Recognition)
-3.  **API Server** (Node.js Proxy)
+Our platform is powered by a 3-tier architecture:
 
-You need to run all three components for full functionality.
+1. **Client (Chrome Extension `/src`)**:
+   * Uses **MediaPipe Holistic** in the browser to extract 3D skeletal hand landmarks.
+   * Flattens these landmarks into an array of **126 values** (2 hands × 21 landmarks × 3 coordinates `x,y,z`).
+   * Sends the live keypoints stream to the Node middleware.
 
-### 1. Prerequisite
--   Node.js (v16+)
--   Python (v3.10+)  *(Required for TensorFlow 2.19)*
--   Google Chrome
+2. **Middleware (Node.js Server `/sign-speech/node-server`)**:
+   * Acts as a fast JSON proxy to route traffic between the extension sandbox and the Python Deep Learning core.
 
-### 2. Setup AI Service (Python)
-This service runs the TensorFlow model to predict signs from keypoints.
+3. **AI Core (Python Flask `/sign-speech/python-service`)**:
+   * Loads a trained **Transformer model** (`isl_transformer_best.keras`).
+   * Maintains a sliding window buffer of **20 frames** per user session.
+   * Performs real-time inference and stability thresholding.
+   * On the "send" gesture, gathers collected words, queries the **Groq API** to build a context-aware sentence, and uses local TTS to speak the result.
+
+---
+
+## 🛠️ Installation & Setup
+
+You need to run all three components (AI Service, Proxy, and Extension) locally. 
+
+### Prerequisites
+- Node.js (v16+)
+- Python 3.10+
+- A [Groq API Key](https://console.groq.com/)
+
+### 1. Setup AI Service (Python Backend)
+This service runs the TensorFlow Transformer model.
 
 ```bash
 cd sign-speech/python-service
 pip install -r requirements.txt
+```
+*Create a `.env` file inside `sign-speech/python-service` and add your API key:*
+```env
+GROQ_API_KEY=your_groq_key_here
+```
+Run the server:
+```bash
 python app.py
 ```
-> **Note:** Ensure the model file `best_model_60_frames.h5` exists in the `sign-speech` directory.
-> The service runs on `http://localhost:5001`.
+> Runs on `http://localhost:5001`.
 
-### 3. Setup API Server (Node.js)
-This server acts as a bridge between the extension and the Python AI service.
+### 2. Setup API Proxy Server (Node.js Middleware)
+This server handles CORS and bridges the browser to Python.
 
 ```bash
 cd sign-speech/node-server
 npm install
 node server.js
 ```
-> The server runs on `http://localhost:3000`.
+> Runs on `http://localhost:3000`.
 
-### 4. Setup Extension (Frontend)
-Build and load the extension into Chrome.
+### 3. Setup the Chrome Extension (Frontend)
+Build the React/Vite extension and load it into your browser.
 
 ```bash
-# Go to root directory
-cd ../.. 
+# From the project root
 npm install
 npm run build
 ```
-
 **Loading into Chrome:**
-1.  Open Chrome and navigate to `chrome://extensions`.
-2.  Enable **"Developer mode"** (top right toggle).
-3.  Click **"Load unpacked"**.
-4.  Select the `dist` folder generated in the project root.
+1. Navigate to `chrome://extensions`.
+2. Enable **"Developer mode"** (top right).
+3. Click **"Load unpacked"** and select the `/dist` folder inside the project root.
 
 ---
 
-## 🎮 Usage
+## 🎮 How to Use
 
-1.  **Start the Backends**: Ensure `python app.py` (Port 5001) and `node server.js` (Port 3000) are running.
-2.  **Open Google Meet**: Join any meeting.
-3.  **Activate Extension**: You should see the SignMeet overlay in the bottom-left corner.
-    -   **Sign-to-Speech (Normal Mode)**:
-        -   Click "Normal Mode".
-        -   Allow camera permissions when prompted.
-        -   Perform signs (e.g., "Hello", "Thank You", "Good", "Alright").
-        -   The detected word will appear on screen and be spoken aloud.
-    -   **Speech-to-Sign (Speech-Impaired Mode)**:
-        -   Click "Speech-Impaired Mode".
-        -   Turn on **Captions** in Google Meet (cc button).
-        -   As people speak, the avatar will translate the captions into signs.
+1. **Start Backends**: Ensure `python app.py` and `node server.js` are running.
+2. **Open Google Meet**: Start or join a meeting.
+3. **Use the Extension**: Click on the SignMeet overlay widget in the bottom-left corner.
+
+   - **Sign-to-Speech (Normal Mode)**: Select this mode and allow camera access. Perform ISL signs. The system will detect words (e.g., "Hello", "Thank you"). To construct the sentence and trigger the audio speaking, perform the **"send"** gesture.
+   - **Speech-to-Sign (Speech-Impaired Mode)**: Select this mode and turn on Google Meet **Captions (CC)**. Whenever participants speak, the 3D avatar will translate the recognized transcript into signs!
 
 ---
 
 ## 📁 Project Structure
 
--   `/src`: React Extension source code.
-    -   `/content`: Logic injected into Google Meet (Overlay, Capture).
-    -   `/item`: Extensions popup UI.
-    -   `/camera`: Sandboxed camera logic (MediaPipe).
--   `/public`: Static assets (3D models, manifest, icons).
--   `/sign-speech`: Backend services.
-    -   `/python-service`: Flask app running TensorFlow model.
-    -   `/node-server`: Express.js proxy server.
+```text
+SignMeet/
+├── dist/                          # Compiled Chrome extension (load this!)
+├── public/assets/                 # 3D .glb avatar animations & MediaPipe dependencies
+├── src/                           # React extension source code
+│   ├── camera/                    # Sandboxed client-side camera + MediaPipe logic
+│   ├── content/                   # UI injected into Google Meet
+│   └── speech-sign/               # 3D Avatar Three.js rendering logic
+└── sign-speech/                   # Backend folder
+    ├── node-server/               # Express.js intermediary API
+    ├── python-service/            # Flask + TensorFlow AI inference engine
+    └── transformer/               # Keras models and datasets
+```
 
 ---
 
-## 🔧 Troubleshooting
 
--   **Extension connection error**: Ensure both Python (5001) and Node (3000) servers are running.
--   **Camera not working**: 
-    -   Ensure you allowed camera permissions for the extension iframe.
-    -   If Google Meet is using the camera, try turning off your camera in Meet to allow the extension exclusive access (though concurrent access usually works).
--   **Avatar not moving**: Ensure Google Meet captions are enabled (cc button).
-
----
-
-## 📜 License
-ISC

@@ -11,7 +11,7 @@ export class CameraController {
     private isProcessing = false;
     private lastSent = 0;
     private isSending = false;
-    private readonly SEND_INTERVAL = 100;
+    private readonly SEND_INTERVAL = 33; // ~30 FPS (1000ms / 30)
     private readonly USER_ID = "extension_user_" + Math.floor(Math.random() * 1000);
     private animationFrameId: number | null = null;
     private debugText: HTMLDivElement;

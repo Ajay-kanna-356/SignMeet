@@ -10,7 +10,7 @@ const PYTHON_SERVICE_URL = 'http://127.0.0.1:5001';
 app.use(cors());
 // Increase limit for Base64 video frames
 app.use(bodyParser.json({ limit: '10mb' }));
- 
+
 // --- ROUTE: Process Sign Language ---
 // The Frontend calls this continuously with MediaPipe Keypoints
 app.post('/process-sign', async (req, res) => {

@@ -5399,7 +5399,8 @@ class CameraController {
   constructor() {
     this.isProcessing = false;
     this.lastSent = 0;
-    this.SEND_INTERVAL = 100;
+    this.isSending = false;
+    this.SEND_INTERVAL = 33;
     this.USER_ID = "extension_user_" + Math.floor(Math.random() * 1e3);
     this.animationFrameId = null;
     this.stream = null;
@@ -5469,7 +5470,7 @@ class CameraController {
     }
     this.ctx.restore();
     const now = Date.now();
-    if (now - this.lastSent > this.SEND_INTERVAL) {
+    if (now - this.lastSent > this.SEND_INTERVAL && !this.isSending) {
       this.lastSent = now;
       const keypoints = this.extractKeypoints(results);
       this.sendKeypoints(keypoints);
@@ -5493,6 +5494,7 @@ class CameraController {
     return features;
   }
   async sendKeypoints(keypoints) {
+    this.isSending = true;
     try {
       const response = await fetch("http://localhost:3000/process-sign", {
         method: "POST",
@@ -5512,6 +5514,8 @@ class CameraController {
     } catch (err) {
       this.debugText.innerText = "Err";
       this.debugText.style.color = "red";
+    } finally {
+      this.isSending = false;
     }
   }
 }
