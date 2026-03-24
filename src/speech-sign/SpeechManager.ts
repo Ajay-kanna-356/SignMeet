@@ -11,15 +11,15 @@ const DICTIONARY: Record<string, string> = {
   'secretary': 'secretary', 'assistant': 'secretary',
   'sorry': 'sorry', 'apologize': 'sorry', 'apology': 'sorry',
   'team': 'team', 'group': 'team',
-  'thank you': 'thankyou', 'thanks': 'thankyou','thank':'thankyou',
+  'thankyou': 'thankyou', 'thanks': 'thankyou','thank':'thankyou',
   // Newly added
   'finish': 'finish', 'end': 'finish', 'complete': 'finish',
   'start': 'start', 'begin': 'start',
   'meeting': 'meeting', 'meet': 'meeting',
   'we': 'we', 'us': 'we',
   'you': 'you',
-  'me': 'me', 'i': 'me',
-  'what': 'what',
+  'me': 'me', 'i': 'me', 'im': 'me',
+  'what': 'what','whats': 'what',
   'tomorrow': 'tomorrow',
   'yesterday': 'yesterday',
   'no': 'no', 'not': 'no',
@@ -39,11 +39,10 @@ export class SpeechManager {
   }
  // AFTER
 public processSentence(sentence: string) {
-  const cleanSentence = sentence.trim().toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
+  const phraseNormalized = sentence.trim().toLowerCase()
+    .replace(/\bthank you\b/g, 'thankyou');
+  const cleanSentence = phraseNormalized.replace(/[.,\/#!?$%^&*;:{}=\-_`~()"'…]/g, "");
   if (!cleanSentence) return;
-  // Replace multi-word phrases before splitting
-  const phraseNormalized = cleanSentence
-  .replace(/\bthank you\b/g, 'thankyou');
   console.log(`[SIGNMEET] raw: "${cleanSentence}" | normalized: "${phraseNormalized}"`);
   // 2. Split into words immediately
   const currentWords = phraseNormalized.split(/\s+/);
