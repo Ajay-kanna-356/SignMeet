@@ -57620,8 +57620,8 @@ Error generating stack: ` + l2.message + `
         function Ad(t2) {
           function r2(P, w) {
             if (t2) {
-              var C = P.deletions;
-              C === null ? (P.deletions = [w], P.flags |= 16) : C.push(w);
+              var C2 = P.deletions;
+              C2 === null ? (P.deletions = [w], P.flags |= 16) : C2.push(w);
             }
           }
           function a2(P, w) {
@@ -57636,103 +57636,103 @@ Error generating stack: ` + l2.message + `
           function c2(P, w) {
             return P = Qr(P, w), P.index = 0, P.sibling = null, P;
           }
-          function d(P, w, C) {
-            return P.index = C, t2 ? (C = P.alternate, C !== null ? (C = C.index, C < w ? (P.flags |= 67108866, w) : C) : (P.flags |= 67108866, w)) : (P.flags |= 1048576, w);
+          function d(P, w, C2) {
+            return P.index = C2, t2 ? (C2 = P.alternate, C2 !== null ? (C2 = C2.index, C2 < w ? (P.flags |= 67108866, w) : C2) : (P.flags |= 67108866, w)) : (P.flags |= 1048576, w);
           }
           function h2(P) {
             return t2 && P.alternate === null && (P.flags |= 67108866), P;
           }
-          function y(P, w, C, H) {
-            return w === null || w.tag !== 6 ? (w = Ps(C, P.mode, H), w.return = P, w) : (w = c2(w, C), w.return = P, w);
+          function y(P, w, C2, H) {
+            return w === null || w.tag !== 6 ? (w = Ps(C2, P.mode, H), w.return = P, w) : (w = c2(w, C2), w.return = P, w);
           }
-          function R(P, w, C, H) {
-            var Q = C.type;
-            return Q === $a ? j2(P, w, C.props.children, H, C.key) : w !== null && (w.elementType === Q || typeof Q == "object" && Q !== null && Q.$$typeof === ua && pt(Q) === w.type) ? (w = c2(w, C.props), La(w, C), w.return = P, w) : (w = ws(C.type, C.key, C.props, null, P.mode, H), La(w, C), w.return = P, w);
+          function R(P, w, C2, H) {
+            var Q = C2.type;
+            return Q === $a ? j2(P, w, C2.props.children, H, C2.key) : w !== null && (w.elementType === Q || typeof Q == "object" && Q !== null && Q.$$typeof === ua && pt(Q) === w.type) ? (w = c2(w, C2.props), La(w, C2), w.return = P, w) : (w = ws(C2.type, C2.key, C2.props, null, P.mode, H), La(w, C2), w.return = P, w);
           }
-          function L(P, w, C, H) {
-            return w === null || w.tag !== 4 || w.stateNode.containerInfo !== C.containerInfo || w.stateNode.implementation !== C.implementation ? (w = dc(C, P.mode, H), w.return = P, w) : (w = c2(w, C.children || []), w.return = P, w);
+          function L(P, w, C2, H) {
+            return w === null || w.tag !== 4 || w.stateNode.containerInfo !== C2.containerInfo || w.stateNode.implementation !== C2.implementation ? (w = dc(C2, P.mode, H), w.return = P, w) : (w = c2(w, C2.children || []), w.return = P, w);
           }
-          function j2(P, w, C, H, Q) {
-            return w === null || w.tag !== 7 ? (w = Eo(C, P.mode, H, Q), w.return = P, w) : (w = c2(w, C), w.return = P, w);
+          function j2(P, w, C2, H, Q) {
+            return w === null || w.tag !== 7 ? (w = Eo(C2, P.mode, H, Q), w.return = P, w) : (w = c2(w, C2), w.return = P, w);
           }
-          function A(P, w, C) {
-            if (typeof w == "string" && w !== "" || typeof w == "number" || typeof w == "bigint") return w = Ps("" + w, P.mode, C), w.return = P, w;
+          function A(P, w, C2) {
+            if (typeof w == "string" && w !== "" || typeof w == "number" || typeof w == "bigint") return w = Ps("" + w, P.mode, C2), w.return = P, w;
             if (typeof w == "object" && w !== null) {
               switch (w.$$typeof) {
                 case zs:
-                  return C = ws(w.type, w.key, w.props, null, P.mode, C), La(C, w), C.return = P, C;
+                  return C2 = ws(w.type, w.key, w.props, null, P.mode, C2), La(C2, w), C2.return = P, C2;
                 case sa:
-                  return w = dc(w, P.mode, C), w.return = P, w;
+                  return w = dc(w, P.mode, C2), w.return = P, w;
                 case ua:
-                  return w = pt(w), A(P, w, C);
+                  return w = pt(w), A(P, w, C2);
               }
-              if (ca(w) || Fl(w)) return w = Eo(w, P.mode, C, null), w.return = P, w;
-              if (typeof w.then == "function") return A(P, Rt(w), C);
-              if (w.$$typeof === Io) return A(P, Wl(P, w), C);
+              if (ca(w) || Fl(w)) return w = Eo(w, P.mode, C2, null), w.return = P, w;
+              if (typeof w.then == "function") return A(P, Rt(w), C2);
+              if (w.$$typeof === Io) return A(P, Wl(P, w), C2);
               Na(P, w);
             }
             return null;
           }
-          function W2(P, w, C, H) {
+          function W2(P, w, C2, H) {
             var Q = w !== null ? w.key : null;
-            if (typeof C == "string" && C !== "" || typeof C == "number" || typeof C == "bigint") return Q !== null ? null : y(P, w, "" + C, H);
-            if (typeof C == "object" && C !== null) {
-              switch (C.$$typeof) {
+            if (typeof C2 == "string" && C2 !== "" || typeof C2 == "number" || typeof C2 == "bigint") return Q !== null ? null : y(P, w, "" + C2, H);
+            if (typeof C2 == "object" && C2 !== null) {
+              switch (C2.$$typeof) {
                 case zs:
-                  return C.key === Q ? R(P, w, C, H) : null;
+                  return C2.key === Q ? R(P, w, C2, H) : null;
                 case sa:
-                  return C.key === Q ? L(P, w, C, H) : null;
+                  return C2.key === Q ? L(P, w, C2, H) : null;
                 case ua:
-                  return C = pt(C), W2(P, w, C, H);
+                  return C2 = pt(C2), W2(P, w, C2, H);
               }
-              if (ca(C) || Fl(C)) return Q !== null ? null : j2(P, w, C, H, null);
-              if (typeof C.then == "function") return W2(P, w, Rt(C), H);
-              if (C.$$typeof === Io) return W2(P, w, Wl(P, C), H);
-              Na(P, C);
+              if (ca(C2) || Fl(C2)) return Q !== null ? null : j2(P, w, C2, H, null);
+              if (typeof C2.then == "function") return W2(P, w, Rt(C2), H);
+              if (C2.$$typeof === Io) return W2(P, w, Wl(P, C2), H);
+              Na(P, C2);
             }
             return null;
           }
-          function V(P, w, C, H, Q) {
-            if (typeof H == "string" && H !== "" || typeof H == "number" || typeof H == "bigint") return P = P.get(C) || null, y(w, P, "" + H, Q);
+          function V(P, w, C2, H, Q) {
+            if (typeof H == "string" && H !== "" || typeof H == "number" || typeof H == "bigint") return P = P.get(C2) || null, y(w, P, "" + H, Q);
             if (typeof H == "object" && H !== null) {
               switch (H.$$typeof) {
                 case zs:
-                  return P = P.get(H.key === null ? C : H.key) || null, R(w, P, H, Q);
+                  return P = P.get(H.key === null ? C2 : H.key) || null, R(w, P, H, Q);
                 case sa:
-                  return P = P.get(H.key === null ? C : H.key) || null, L(w, P, H, Q);
+                  return P = P.get(H.key === null ? C2 : H.key) || null, L(w, P, H, Q);
                 case ua:
-                  return H = pt(H), V(P, w, C, H, Q);
+                  return H = pt(H), V(P, w, C2, H, Q);
               }
-              if (ca(H) || Fl(H)) return P = P.get(C) || null, j2(w, P, H, Q, null);
-              if (typeof H.then == "function") return V(P, w, C, Rt(H), Q);
-              if (H.$$typeof === Io) return V(P, w, C, Wl(w, H), Q);
+              if (ca(H) || Fl(H)) return P = P.get(C2) || null, j2(w, P, H, Q, null);
+              if (typeof H.then == "function") return V(P, w, C2, Rt(H), Q);
+              if (H.$$typeof === Io) return V(P, w, C2, Wl(w, H), Q);
               Na(w, H);
             }
             return null;
           }
-          function Oe(P, w, C, H) {
-            for (var Q = null, Ge = null, J = w, Pe = w = 0, me = null; J !== null && Pe < C.length; Pe++) {
+          function Oe(P, w, C2, H) {
+            for (var Q = null, Ge = null, J = w, Pe = w = 0, me = null; J !== null && Pe < C2.length; Pe++) {
               J.index > Pe ? (me = J, J = null) : me = J.sibling;
-              var be = W2(P, J, C[Pe], H);
+              var be = W2(P, J, C2[Pe], H);
               if (be === null) {
                 J === null && (J = me);
                 break;
               }
               t2 && J && be.alternate === null && r2(P, J), w = d(be, w, Pe), Ge === null ? Q = be : Ge.sibling = be, Ge = be, J = me;
             }
-            if (Pe === C.length) return a2(P, J), ue && or(P, Pe), Q;
+            if (Pe === C2.length) return a2(P, J), ue && or(P, Pe), Q;
             if (J === null) {
-              for (; Pe < C.length; Pe++) J = A(P, C[Pe], H), J !== null && (w = d(J, w, Pe), Ge === null ? Q = J : Ge.sibling = J, Ge = J);
+              for (; Pe < C2.length; Pe++) J = A(P, C2[Pe], H), J !== null && (w = d(J, w, Pe), Ge === null ? Q = J : Ge.sibling = J, Ge = J);
               return ue && or(P, Pe), Q;
             }
-            for (J = l2(J); Pe < C.length; Pe++) me = V(J, P, Pe, C[Pe], H), me !== null && (t2 && me.alternate !== null && J.delete(me.key === null ? Pe : me.key), w = d(me, w, Pe), Ge === null ? Q = me : Ge.sibling = me, Ge = me);
+            for (J = l2(J); Pe < C2.length; Pe++) me = V(J, P, Pe, C2[Pe], H), me !== null && (t2 && me.alternate !== null && J.delete(me.key === null ? Pe : me.key), w = d(me, w, Pe), Ge === null ? Q = me : Ge.sibling = me, Ge = me);
             return t2 && J.forEach(function(Oo) {
               return r2(P, Oo);
             }), ue && or(P, Pe), Q;
           }
-          function vn(P, w, C, H) {
-            if (C == null) throw Error(F(151));
-            for (var Q = null, Ge = null, J = w, Pe = w = 0, me = null, be = C.next(); J !== null && !be.done; Pe++, be = C.next()) {
+          function vn(P, w, C2, H) {
+            if (C2 == null) throw Error(F(151));
+            for (var Q = null, Ge = null, J = w, Pe = w = 0, me = null, be = C2.next(); J !== null && !be.done; Pe++, be = C2.next()) {
               J.index > Pe ? (me = J, J = null) : me = J.sibling;
               var Oo = W2(P, J, be.value, H);
               if (Oo === null) {
@@ -57743,28 +57743,28 @@ Error generating stack: ` + l2.message + `
             }
             if (be.done) return a2(P, J), ue && or(P, Pe), Q;
             if (J === null) {
-              for (; !be.done; Pe++, be = C.next()) be = A(P, be.value, H), be !== null && (w = d(be, w, Pe), Ge === null ? Q = be : Ge.sibling = be, Ge = be);
+              for (; !be.done; Pe++, be = C2.next()) be = A(P, be.value, H), be !== null && (w = d(be, w, Pe), Ge === null ? Q = be : Ge.sibling = be, Ge = be);
               return ue && or(P, Pe), Q;
             }
-            for (J = l2(J); !be.done; Pe++, be = C.next()) be = V(J, P, Pe, be.value, H), be !== null && (t2 && be.alternate !== null && J.delete(be.key === null ? Pe : be.key), w = d(be, w, Pe), Ge === null ? Q = be : Ge.sibling = be, Ge = be);
+            for (J = l2(J); !be.done; Pe++, be = C2.next()) be = V(J, P, Pe, be.value, H), be !== null && (t2 && be.alternate !== null && J.delete(be.key === null ? Pe : be.key), w = d(be, w, Pe), Ge === null ? Q = be : Ge.sibling = be, Ge = be);
             return t2 && J.forEach(function(qs) {
               return r2(P, qs);
             }), ue && or(P, Pe), Q;
           }
-          function li(P, w, C, H) {
-            if (typeof C == "object" && C !== null && C.type === $a && C.key === null && (C = C.props.children), typeof C == "object" && C !== null) {
-              switch (C.$$typeof) {
+          function li(P, w, C2, H) {
+            if (typeof C2 == "object" && C2 !== null && C2.type === $a && C2.key === null && (C2 = C2.props.children), typeof C2 == "object" && C2 !== null) {
+              switch (C2.$$typeof) {
                 case zs:
                   e: {
-                    for (var Q = C.key; w !== null; ) {
+                    for (var Q = C2.key; w !== null; ) {
                       if (w.key === Q) {
-                        if (Q = C.type, Q === $a) {
+                        if (Q = C2.type, Q === $a) {
                           if (w.tag === 7) {
-                            a2(P, w.sibling), H = c2(w, C.props.children), H.return = P, P = H;
+                            a2(P, w.sibling), H = c2(w, C2.props.children), H.return = P, P = H;
                             break e;
                           }
                         } else if (w.elementType === Q || typeof Q == "object" && Q !== null && Q.$$typeof === ua && pt(Q) === w.type) {
-                          a2(P, w.sibling), H = c2(w, C.props), La(H, C), H.return = P, P = H;
+                          a2(P, w.sibling), H = c2(w, C2.props), La(H, C2), H.return = P, P = H;
                           break e;
                         }
                         a2(P, w);
@@ -57772,15 +57772,15 @@ Error generating stack: ` + l2.message + `
                       } else r2(P, w);
                       w = w.sibling;
                     }
-                    C.type === $a ? (H = Eo(C.props.children, P.mode, H, C.key), H.return = P, P = H) : (H = ws(C.type, C.key, C.props, null, P.mode, H), La(H, C), H.return = P, P = H);
+                    C2.type === $a ? (H = Eo(C2.props.children, P.mode, H, C2.key), H.return = P, P = H) : (H = ws(C2.type, C2.key, C2.props, null, P.mode, H), La(H, C2), H.return = P, P = H);
                   }
                   return h2(P);
                 case sa:
                   e: {
-                    for (Q = C.key; w !== null; ) {
+                    for (Q = C2.key; w !== null; ) {
                       if (w.key === Q) {
-                        if (w.tag === 4 && w.stateNode.containerInfo === C.containerInfo && w.stateNode.implementation === C.implementation) {
-                          a2(P, w.sibling), H = c2(w, C.children || []), H.return = P, P = H;
+                        if (w.tag === 4 && w.stateNode.containerInfo === C2.containerInfo && w.stateNode.implementation === C2.implementation) {
+                          a2(P, w.sibling), H = c2(w, C2.children || []), H.return = P, P = H;
                           break e;
                         } else {
                           a2(P, w);
@@ -57789,27 +57789,27 @@ Error generating stack: ` + l2.message + `
                       } else r2(P, w);
                       w = w.sibling;
                     }
-                    H = dc(C, P.mode, H), H.return = P, P = H;
+                    H = dc(C2, P.mode, H), H.return = P, P = H;
                   }
                   return h2(P);
                 case ua:
-                  return C = pt(C), li(P, w, C, H);
+                  return C2 = pt(C2), li(P, w, C2, H);
               }
-              if (ca(C)) return Oe(P, w, C, H);
-              if (Fl(C)) {
-                if (Q = Fl(C), typeof Q != "function") throw Error(F(150));
-                return C = Q.call(C), vn(P, w, C, H);
+              if (ca(C2)) return Oe(P, w, C2, H);
+              if (Fl(C2)) {
+                if (Q = Fl(C2), typeof Q != "function") throw Error(F(150));
+                return C2 = Q.call(C2), vn(P, w, C2, H);
               }
-              if (typeof C.then == "function") return li(P, w, Rt(C), H);
-              if (C.$$typeof === Io) return li(P, w, Wl(P, C), H);
-              Na(P, C);
+              if (typeof C2.then == "function") return li(P, w, Rt(C2), H);
+              if (C2.$$typeof === Io) return li(P, w, Wl(P, C2), H);
+              Na(P, C2);
             }
-            return typeof C == "string" && C !== "" || typeof C == "number" || typeof C == "bigint" ? (C = "" + C, w !== null && w.tag === 6 ? (a2(P, w.sibling), H = c2(w, C), H.return = P, P = H) : (a2(P, w), H = Ps(C, P.mode, H), H.return = P, P = H), h2(P)) : a2(P, w);
+            return typeof C2 == "string" && C2 !== "" || typeof C2 == "number" || typeof C2 == "bigint" ? (C2 = "" + C2, w !== null && w.tag === 6 ? (a2(P, w.sibling), H = c2(w, C2), H.return = P, P = H) : (a2(P, w), H = Ps(C2, P.mode, H), H.return = P, P = H), h2(P)) : a2(P, w);
           }
-          return function(P, w, C, H) {
+          return function(P, w, C2, H) {
             try {
               Bs = 0;
-              var Q = li(P, w, C, H);
+              var Q = li(P, w, C2, H);
               return Kt = null, Q;
             } catch (J) {
               if (J === cl || J === jc) throw J;
@@ -62688,7 +62688,7 @@ No matching component was found for:
     const [z, m2, s] = reactExports.useMemo(() => {
       const r2 = () => {
         if (!e2.current.element) return;
-        const { left: y, top: C, width: H, height: O, bottom: S, right: x2, x: B, y: R } = e2.current.element.getBoundingClientRect(), l2 = { left: y, top: C, width: H, height: O, bottom: S, right: x2, x: B, y: R };
+        const { left: y, top: C2, width: H, height: O, bottom: S, right: x2, x: B, y: R } = e2.current.element.getBoundingClientRect(), l2 = { left: y, top: C2, width: H, height: O, bottom: S, right: x2, x: B, y: R };
         e2.current.element instanceof HTMLElement && i2 && (l2.height = e2.current.element.offsetHeight, l2.width = e2.current.element.offsetWidth), Object.freeze(l2), w.current && !D(e2.current.lastBounds, l2) && h2(e2.current.lastBounds = l2);
       };
       return [r2, f ? g(r2, f) : r2, d ? g(r2, d) : r2];
@@ -66192,11 +66192,21 @@ No matching component was found for:
     yesterday: chrome.runtime.getURL("assets/yesterday.glb"),
     no: chrome.runtime.getURL("assets/no.glb"),
     problem: chrome.runtime.getURL("assets/problem.glb"),
-    help: chrome.runtime.getURL('assets/help.glb'),
-    wait: chrome.runtime.getURL("assets/wait.glb") 
+    wait: chrome.runtime.getURL("assets/wait.glb"),
+    help: chrome.runtime.getURL("assets/help.glb")
   };
-  function getLongestClip(animations) {
+  const CLIP_INDEX_OVERRIDES = {
+    help: 1,
+    wait: 1
+  };
+  function getClipForModel(name, animations) {
     if (!animations || animations.length === 0) return null;
+    if (name in CLIP_INDEX_OVERRIDES) {
+      const index = CLIP_INDEX_OVERRIDES[name];
+      const clip = animations[index];
+      if (clip) return clip;
+      console.warn(`[SIGNMEET] Override index ${index} not found for "${name}", falling back to longest`);
+    }
     return animations.reduce(
       (longest, clip) => clip.duration > longest.duration ? clip : longest
     );
@@ -66230,8 +66240,8 @@ No matching component was found for:
       yesterday: useGLTF(MODELS.yesterday),
       no: useGLTF(MODELS.no),
       problem: useGLTF(MODELS.problem),
-      wait:useGLTF(MODELS.wait),
-      help: useGLTF(MODELS.help), 
+      wait: useGLTF(MODELS.wait),
+      help: useGLTF(MODELS.help)
     };
     const animations = reactExports.useMemo(() => {
       const clips = [];
@@ -66243,8 +66253,9 @@ No matching component was found for:
           if (cleanName) idleBoneMap.set(cleanName, obj.name);
         }
       });
+      console.log(`[SIGNMEET] wait clips:`, gltfs.wait.animations.map((c2, i2) => `[${i2}] "${c2.name}" (${c2.duration.toFixed(2)}s)`));
       Object.entries(gltfs).forEach(([name, gltf]) => {
-        const originalClip = getLongestClip(gltf.animations);
+        const originalClip = getClipForModel(name, gltf.animations);
         if (!originalClip) {
           console.warn(`[SIGNMEET] No animation found in "${name}.glb". Skipping.`);
           return;
@@ -66347,6 +66358,7 @@ No matching component was found for:
     "group": "team",
     "thank you": "thankyou",
     "thanks": "thankyou",
+    "thank": "thankyou",
     // Newly added
     "finish": "finish",
     "end": "finish",
@@ -66363,12 +66375,15 @@ No matching component was found for:
     "what": "what",
     "tomorrow": "tomorrow",
     "yesterday": "yesterday",
-    'help': 'help', 'assist': 'help',
-    'wait':'wait','halt':'wait','stay':'wait',// DISABLED: help.glb missing from public/assets — add the file to re-enable
     "no": "no",
     "not": "no",
     "problem": "problem",
-    "issue": "problem"
+    "issue": "problem",
+    "help": "help",
+    "assist": "help",
+    "wait": "wait",
+    "stop": "wait",
+    "halt": "wait"
   };
   class SpeechManager {
     constructor(onQueueUpdate) {
@@ -66376,10 +66391,13 @@ No matching component was found for:
       this.lastProcessedWords = [];
       this.onQueueChange = onQueueUpdate;
     }
+    // AFTER
     processSentence(sentence) {
       const cleanSentence = sentence.trim().toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
       if (!cleanSentence) return;
-      const currentWords = cleanSentence.split(/\s+/);
+      const phraseNormalized = cleanSentence.replace(/\bthank you\b/g, "thankyou");
+      console.log(`[SIGNMEET] raw: "${cleanSentence}" | normalized: "${phraseNormalized}"`);
+      const currentWords = phraseNormalized.split(/\s+/);
       let diffIndex = 0;
       const len = Math.min(this.lastProcessedWords.length, currentWords.length);
       while (diffIndex < len) {
@@ -66529,6 +66547,26 @@ No matching component was found for:
       }
     }
   }
+  const C = {
+    blue: "rgb(66, 133, 244)",
+    // primary accent (Google blue)
+    blueDim: "rgba(66, 133, 244, 0.12)",
+    // subtle blue tint for active panels
+    blueBorder: "rgba(66, 133, 244, 0.30)",
+    // border when active
+    blueGlow: "0 0 32px rgba(66, 133, 244, 0.45)",
+    blueText: "rgb(149, 190, 255)",
+    // softer blue for headings / labels
+    bgPanel: "rgba(12, 12, 14, 0.97)",
+    bgCard: "rgba(255, 255, 255, 0.04)",
+    bgButton: "rgba(255, 255, 255, 0.07)",
+    border: "rgba(255, 255, 255, 0.08)",
+    borderStrong: "rgba(255, 255, 255, 0.13)",
+    textPrimary: "#ffffff",
+    textMuted: "rgba(255, 255, 255, 0.45)",
+    textCaption: "rgba(255, 255, 255, 0.28)",
+    shadow: "0 16px 40px rgba(0, 0, 0, 0.85)"
+  };
   const Overlay = () => {
     const [mode, setMode] = reactExports.useState("OFF");
     const [queue, setQueue] = reactExports.useState([]);
@@ -66586,6 +66624,29 @@ No matching component was found for:
     const handleChildConsumed = () => {
       setQueue([]);
     };
+    const modeBtn = (active) => ({
+      flex: 1,
+      padding: "11px 8px",
+      borderRadius: "8px",
+      background: active ? C.blue : C.bgButton,
+      color: active ? "#fff" : C.textMuted,
+      border: `1px solid ${active ? C.blueBorder : C.border}`,
+      cursor: "pointer",
+      fontSize: "11px",
+      fontWeight: "bold",
+      letterSpacing: "0.4px",
+      transition: "all 0.2s ease",
+      boxShadow: active ? `0 2px 14px rgba(66,133,244,0.4)` : "none"
+    });
+    const infoPanel = {
+      background: C.blueDim,
+      padding: "12px",
+      borderRadius: "10px",
+      border: `1px solid ${C.blueBorder}`,
+      display: "flex",
+      flexDirection: "column",
+      gap: "10px"
+    };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { position: "fixed", inset: 0, pointerEvents: "none", zIndex: 999999 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
         position: "absolute",
@@ -66593,14 +66654,14 @@ No matching component was found for:
         right: 20,
         width: 250,
         height: 300,
-        background: "rgba(255,255,255,0.05)",
+        background: C.bgCard,
         borderRadius: "20px",
-        border: "1px solid rgba(255,255,255,0.1)",
-        backdropFilter: "blur(5px)",
+        border: `1px solid ${C.border}`,
+        backdropFilter: "blur(8px)",
         opacity: mode === "SPEECH_IMPAIRED" || mode === "OFF" && queue.length > 0 ? 1 : 0,
         pointerEvents: "none",
         transition: "opacity 0.5s",
-        boxShadow: "0 0 32px rgba(66, 133, 244, 0.45)"
+        boxShadow: C.blueGlow
       }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Canvas, { camera: { position: [0, 0.2, 1.5], fov: 40 }, gl: { alpha: true }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("ambientLight", { intensity: 1.5 }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("pointLight", { position: [5, 5, 5], intensity: 1 }),
@@ -66620,12 +66681,12 @@ No matching component was found for:
         background: "rgba(0,0,0,0.88)",
         padding: "15px 40px",
         borderRadius: "40px",
-        color: "rgb(66, 133, 244)",
+        color: C.blue,
         fontSize: "32px",
         fontWeight: "bold",
-        border: "3px solid rgb(66, 133, 244)",
+        border: `3px solid ${C.blue}`,
         backdropFilter: "blur(10px)",
-        boxShadow: "0 0 32px rgba(66, 133, 244, 0.45)",
+        boxShadow: C.blueGlow,
         pointerEvents: "none",
         letterSpacing: "2px"
       }, children: [
@@ -66637,79 +66698,101 @@ No matching component was found for:
         bottom: "30px",
         left: "30px",
         pointerEvents: "auto",
-        background: "rgba(12, 12, 14, 0.97)",
-        color: "#ffffff",
+        background: C.bgPanel,
+        color: C.textPrimary,
         padding: "18px",
         borderRadius: "16px",
-        border: "1px solid rgba(255, 255, 255, 0.13)",
+        border: `1px solid ${C.borderStrong}`,
         width: "320px",
         fontFamily: "system-ui, sans-serif",
-        boxShadow: "0 16px 40px rgba(0, 0, 0, 0.85)",
+        boxShadow: C.shadow,
         display: "flex",
         flexDirection: "column",
         gap: "14px"
       }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "12px" }, children:
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: "20px", fontWeight: "bold", color: "rgb(149, 190, 255)", textTransform: "uppercase", letterSpacing: "3px" }, children: "SignMeet" })
-        }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          borderBottom: `1px solid ${C.border}`,
+          paddingBottom: "12px"
+        }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
+            fontSize: "15px",
+            fontWeight: "bold",
+            color: C.blueText,
+            textTransform: "uppercase",
+            letterSpacing: "1.5px"
+          }, children: "SignMeet" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
+            fontSize: "10px",
+            padding: "3px 9px",
+            borderRadius: "4px",
+            background: mode !== "OFF" ? C.blueDim : C.bgButton,
+            color: mode !== "OFF" ? C.blue : C.textMuted,
+            border: `1px solid ${mode !== "OFF" ? C.blueBorder : C.border}`,
+            fontWeight: "bold",
+            letterSpacing: "0.5px"
+          }, children: mode === "OFF" ? "IDLE" : mode.replace("_", " ") })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: "10px" }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               onClick: () => setMode(mode === "SPEECH_IMPAIRED" ? "OFF" : "SPEECH_IMPAIRED"),
-              style: {
-                flex: 1,
-                padding: "12px 8px",
-                borderRadius: "8px",
-                background: mode === "SPEECH_IMPAIRED" ? "rgb(66, 133, 244)" : "rgba(255, 255, 255, 0.07)",
-                color: mode === "SPEECH_IMPAIRED" ? "#fff" : "rgba(255, 255, 255, 0.45)",
-                border: `1px solid ${mode === "SPEECH_IMPAIRED" ? "rgba(66, 133, 244, 0.30)" : "rgba(255, 255, 255, 0.08)"}`,
-                boxShadow: mode === "SPEECH_IMPAIRED" ? "0 2px 14px rgba(66,133,244,0.4)" : "none",
-                cursor: "pointer",
-                fontSize: "11px",
-                fontWeight: "bold",
-                transition: "0.2s all"
-              },
-              children: "Listening Mode"
+              style: modeBtn(mode === "SPEECH_IMPAIRED"),
+              children: "🎧 Listening Mode"
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               onClick: () => setMode(mode === "NORMAL" ? "OFF" : "NORMAL"),
-              style: {
-                flex: 1,
-                padding: "12px 8px",
-                borderRadius: "8px",
-                background: mode === "NORMAL" ? "rgb(66, 133, 244)" : "rgba(255, 255, 255, 0.07)",
-                color: mode === "NORMAL" ? "#fff" : "rgba(255, 255, 255, 0.45)",
-                border: `1px solid ${mode === "NORMAL" ? "rgba(66, 133, 244, 0.30)" : "rgba(255, 255, 255, 0.08)"}`,
-                boxShadow: mode === "NORMAL" ? "0 2px 14px rgba(66,133,244,0.4)" : "none",
-                cursor: "pointer",
-                fontSize: "11px",
-                fontWeight: "bold",
-                transition: "0.2s all"
-              },
-              children: "Speaking mode"
+              style: modeBtn(mode === "NORMAL"),
+              children: "✋ Speaking Mode"
             }
           )
         ] }),
-        mode === "SPEECH_IMPAIRED" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { background: "rgba(66, 133, 244, 0.12)", padding: "12px", borderRadius: "10px", border: "1px solid rgba(66, 133, 244, 0.30)", display: "flex", flexDirection: "column", gap: "10px" }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }, children: "Avatar translating speech to signs..." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleTestAvatar, style: { width: "100%", padding: "8px", background: "#3b82f6", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "11px" }, children: "Run Avatar Demo" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: "11px", color: "rgb(149, 190, 255)", fontStyle: "italic", display: "flex", alignItems: "center", gap: "6px" }, children: [
-            "📡 ",
-            captionsText.length > 30 ? captionsText.substring(0, 30) + "..." : captionsText
+        mode === "SPEECH_IMPAIRED" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: infoPanel, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "11px", color: C.textMuted }, children: "Avatar translating speech to signs..." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: handleTestAvatar,
+              style: {
+                width: "100%",
+                padding: "9px",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "11px",
+                fontWeight: "bold",
+                letterSpacing: "0.4px",
+                background: C.blue,
+                color: "#fff",
+                border: "none",
+                boxShadow: `0 2px 10px rgba(66,133,244,0.35)`,
+                transition: "opacity 0.2s"
+              },
+              children: "▶ Run Avatar Demo"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
+            fontSize: "11px",
+            color: C.blueText,
+            fontStyle: "italic",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px"
+          }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "📡" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: captionsText.length > 30 ? captionsText.substring(0, 30) + "…" : captionsText })
           ] })
         ] }),
-        mode === "NORMAL" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { background: "rgba(66, 133, 244, 0.12)", padding: "12px", borderRadius: "10px", border: "1px solid rgba(66, 133, 244, 0.30)", display: "flex", flexDirection: "column", gap: "10px" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { background: "rgba(66, 133, 244, 0.12)", padding: "12px", borderRadius: "10px", border: "1px solid rgba(66, 133, 244, 0.30)" }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }, children: "Capturing signs from camera..." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: "11px", color: "rgb(149, 190, 255)", fontStyle: "italic" }, children: [
-            "",
-            detectedSign || "Waiting for signs..."
-          ] })
-        ] }) }),
-        mode === "OFF" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { textAlign: "center", padding: "8px", color: "rgba(255, 255, 255, 0.28)", fontSize: "11px" }, children: "Select a mode above to begin." })
+        mode === "NORMAL" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: infoPanel, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "11px", color: C.textMuted }, children: "Capturing signs from camera..." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "11px", color: C.blueText, fontStyle: "italic" }, children: detectedSign || "Waiting for signs..." })
+        ] }),
+        mode === "OFF" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { textAlign: "center", padding: "8px", color: C.textCaption, fontSize: "11px" }, children: "Select a mode above to begin." })
       ] })
     ] });
   };

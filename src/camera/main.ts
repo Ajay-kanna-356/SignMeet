@@ -153,7 +153,13 @@ export class CameraController {
             if (data.sentence) displayText += `${data.sentence}`;
 
             this.debugText.innerText = displayText;
-            this.debugText.style.color = "#0f0";
+            this.debugText.style.color = "rgba(254, 255, 254, 0.9)";
+            this.debugText.style.textShadow = `
+                -1px -1px 0 black,
+                1px -1px 0 black,
+                -1px  1px 0 black,
+                1px  1px 0 black
+            `;
             this.debugText.style.whiteSpace = "pre-wrap"; // Keep newlines
 
             // Note: Not constantly POSTing to Avatar for every single word anymore.
