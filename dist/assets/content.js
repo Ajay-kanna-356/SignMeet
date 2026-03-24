@@ -66191,8 +66191,9 @@ No matching component was found for:
     tomorrow: chrome.runtime.getURL("assets/tomorrow.glb"),
     yesterday: chrome.runtime.getURL("assets/yesterday.glb"),
     no: chrome.runtime.getURL("assets/no.glb"),
-    problem: chrome.runtime.getURL("assets/problem.glb")
-    // help: chrome.runtime.getURL('assets/help.glb'), // DISABLED: help.glb missing from public/assets
+    problem: chrome.runtime.getURL("assets/problem.glb"),
+    help: chrome.runtime.getURL('assets/help.glb'),
+    wait: chrome.runtime.getURL("assets/wait.glb") 
   };
   function getLongestClip(animations) {
     if (!animations || animations.length === 0) return null;
@@ -66228,8 +66229,9 @@ No matching component was found for:
       tomorrow: useGLTF(MODELS.tomorrow),
       yesterday: useGLTF(MODELS.yesterday),
       no: useGLTF(MODELS.no),
-      problem: useGLTF(MODELS.problem)
-      // help: useGLTF(MODELS.help), // DISABLED: help.glb missing
+      problem: useGLTF(MODELS.problem),
+      wait:useGLTF(MODELS.wait),
+      help: useGLTF(MODELS.help), 
     };
     const animations = reactExports.useMemo(() => {
       const clips = [];
@@ -66361,7 +66363,8 @@ No matching component was found for:
     "what": "what",
     "tomorrow": "tomorrow",
     "yesterday": "yesterday",
-    // 'help': 'help', 'assist': 'help', // DISABLED: help.glb missing from public/assets — add the file to re-enable
+    'help': 'help', 'assist': 'help',
+    'wait':'wait','halt':'wait','stay':'wait',// DISABLED: help.glb missing from public/assets — add the file to re-enable
     "no": "no",
     "not": "no",
     "problem": "problem",
@@ -66596,7 +66599,8 @@ No matching component was found for:
         backdropFilter: "blur(5px)",
         opacity: mode === "SPEECH_IMPAIRED" || mode === "OFF" && queue.length > 0 ? 1 : 0,
         pointerEvents: "none",
-        transition: "opacity 0.5s"
+        transition: "opacity 0.5s",
+        boxShadow: "0 0 32px rgba(66, 133, 244, 0.45)"
       }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Canvas, { camera: { position: [0, 0.2, 1.5], fov: 40 }, gl: { alpha: true }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("ambientLight", { intensity: 1.5 }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("pointLight", { position: [5, 5, 5], intensity: 1 }),
@@ -66613,15 +66617,15 @@ No matching component was found for:
         top: "10%",
         left: "50%",
         transform: "translateX(-50%)",
-        background: "rgba(0,0,0,0.85)",
+        background: "rgba(0,0,0,0.88)",
         padding: "15px 40px",
         borderRadius: "40px",
-        color: "#0f0",
+        color: "rgb(66, 133, 244)",
         fontSize: "32px",
         fontWeight: "bold",
-        border: "3px solid #0f0",
+        border: "3px solid rgb(66, 133, 244)",
         backdropFilter: "blur(10px)",
-        boxShadow: "0 0 40px rgba(0,255,0,0.6)",
+        boxShadow: "0 0 32px rgba(66, 133, 244, 0.45)",
         pointerEvents: "none",
         letterSpacing: "2px"
       }, children: [
@@ -66633,28 +66637,21 @@ No matching component was found for:
         bottom: "30px",
         left: "30px",
         pointerEvents: "auto",
-        background: "rgba(15,15,15,0.95)",
-        color: "white",
-        padding: "20px",
+        background: "rgba(12, 12, 14, 0.97)",
+        color: "#ffffff",
+        padding: "18px",
         borderRadius: "16px",
-        border: "1px solid #333",
+        border: "1px solid rgba(255, 255, 255, 0.13)",
         width: "320px",
         fontFamily: "system-ui, sans-serif",
-        boxShadow: "0 12px 32px rgba(0,0,0,0.8)",
+        boxShadow: "0 16px 40px rgba(0, 0, 0, 0.85)",
         display: "flex",
         flexDirection: "column",
-        gap: "15px"
+        gap: "14px"
       }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #333", paddingBottom: "10px" }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: "16px", fontWeight: "bold", color: "#0f0", textTransform: "uppercase", letterSpacing: "1px" }, children: "SignMeet Beta" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
-            fontSize: "10px",
-            padding: "4px 8px",
-            borderRadius: "4px",
-            background: "#333",
-            color: "#aaa"
-          }, children: mode === "OFF" ? "SERVICE IDLE" : mode.replace("_", " ") })
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "12px" }, children:
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: "20px", fontWeight: "bold", color: "rgb(149, 190, 255)", textTransform: "uppercase", letterSpacing: "3px" }, children: "SignMeet" })
+        }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: "10px" }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
@@ -66664,9 +66661,10 @@ No matching component was found for:
                 flex: 1,
                 padding: "12px 8px",
                 borderRadius: "8px",
-                background: mode === "SPEECH_IMPAIRED" ? "#0f0" : "#222",
-                color: mode === "SPEECH_IMPAIRED" ? "#000" : "#fff",
-                border: "none",
+                background: mode === "SPEECH_IMPAIRED" ? "rgb(66, 133, 244)" : "rgba(255, 255, 255, 0.07)",
+                color: mode === "SPEECH_IMPAIRED" ? "#fff" : "rgba(255, 255, 255, 0.45)",
+                border: `1px solid ${mode === "SPEECH_IMPAIRED" ? "rgba(66, 133, 244, 0.30)" : "rgba(255, 255, 255, 0.08)"}`,
+                boxShadow: mode === "SPEECH_IMPAIRED" ? "0 2px 14px rgba(66,133,244,0.4)" : "none",
                 cursor: "pointer",
                 fontSize: "11px",
                 fontWeight: "bold",
@@ -66683,9 +66681,10 @@ No matching component was found for:
                 flex: 1,
                 padding: "12px 8px",
                 borderRadius: "8px",
-                background: mode === "NORMAL" ? "rgb(186, 217, 246)" : "#222",
-                color: mode === "NORMAL" ? "#000" : "#fff",
-                border: "none",
+                background: mode === "NORMAL" ? "rgb(66, 133, 244)" : "rgba(255, 255, 255, 0.07)",
+                color: mode === "NORMAL" ? "#fff" : "rgba(255, 255, 255, 0.45)",
+                border: `1px solid ${mode === "NORMAL" ? "rgba(66, 133, 244, 0.30)" : "rgba(255, 255, 255, 0.08)"}`,
+                boxShadow: mode === "NORMAL" ? "0 2px 14px rgba(66,133,244,0.4)" : "none",
                 cursor: "pointer",
                 fontSize: "11px",
                 fontWeight: "bold",
@@ -66695,22 +66694,22 @@ No matching component was found for:
             }
           )
         ] }),
-        mode === "SPEECH_IMPAIRED" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { background: "rgba(255,255,255,0.03)", padding: "12px", borderRadius: "8px" }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "11px", color: "#888", marginBottom: "8px" }, children: "Avatar translating speech to signs..." }),
+        mode === "SPEECH_IMPAIRED" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { background: "rgba(66, 133, 244, 0.12)", padding: "12px", borderRadius: "10px", border: "1px solid rgba(66, 133, 244, 0.30)", display: "flex", flexDirection: "column", gap: "10px" }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }, children: "Avatar translating speech to signs..." }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleTestAvatar, style: { width: "100%", padding: "8px", background: "#3b82f6", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "11px" }, children: "Run Avatar Demo" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: "8px", fontSize: "11px", color: "#0f0", fontStyle: "italic", opacity: 0.7 }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: "11px", color: "rgb(149, 190, 255)", fontStyle: "italic", display: "flex", alignItems: "center", gap: "6px" }, children: [
             "📡 ",
             captionsText.length > 30 ? captionsText.substring(0, 30) + "..." : captionsText
           ] })
         ] }),
-        mode === "NORMAL" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { background: "rgba(255,255,255,0.03)", padding: "12px", borderRadius: "8px" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { background: "rgba(255,255,255,0.03)", padding: "12px", borderRadius: "8px" }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "11px", color: "#888", marginBottom: "8px" }, children: "Capturing signs from camera..." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginTop: "8px", fontSize: "11px", color: "#0f0", fontStyle: "italic", opacity: 0.7 }, children: [
-            "Target: ",
+        mode === "NORMAL" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { background: "rgba(66, 133, 244, 0.12)", padding: "12px", borderRadius: "10px", border: "1px solid rgba(66, 133, 244, 0.30)", display: "flex", flexDirection: "column", gap: "10px" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { background: "rgba(66, 133, 244, 0.12)", padding: "12px", borderRadius: "10px", border: "1px solid rgba(66, 133, 244, 0.30)" }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "11px", color: "rgba(255, 255, 255, 0.45)" }, children: "Capturing signs from camera..." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: "11px", color: "rgb(149, 190, 255)", fontStyle: "italic" }, children: [
+            "",
             detectedSign || "Waiting for signs..."
           ] })
         ] }) }),
-        mode === "OFF" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { textAlign: "center", padding: "10px", color: "#555", fontSize: "11px" }, children: "Select a mode above to begin." })
+        mode === "OFF" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { textAlign: "center", padding: "8px", color: "rgba(255, 255, 255, 0.28)", fontSize: "11px" }, children: "Select a mode above to begin." })
       ] })
     ] });
   };

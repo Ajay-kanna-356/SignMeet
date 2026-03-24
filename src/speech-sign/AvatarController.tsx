@@ -1,4 +1,3 @@
-
 // src/speech-sign/AvatarController.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useGLTF, useAnimations } from '@react-three/drei';
@@ -30,14 +29,36 @@ const MODELS = {
   yesterday: chrome.runtime.getURL('assets/yesterday.glb'),
   no: chrome.runtime.getURL('assets/no.glb'),
   problem: chrome.runtime.getURL('assets/problem.glb'),
-  // help: chrome.runtime.getURL('assets/help.glb'), // DISABLED: help.glb missing from public/assets
+  wait: chrome.runtime.getURL('assets/wait.glb'),
+  help: chrome.runtime.getURL('assets/help.glb'),
 };
 
 // Always pick the animation clip with the longest duration.
 // This avoids guessing indices — T-pose/setup clips are always short (~0.5s),
 // and the actual sign animation is always the longest one in the file.
-function getLongestClip(animations: THREE.AnimationClip[]): THREE.AnimationClip | null {
+// function getLongestClip(animations: THREE.AnimationClip[]): THREE.AnimationClip | null {
+//   if (!animations || animations.length === 0) return null;
+//   return animations.reduce((longest, clip) =>
+//     clip.duration > longest.duration ? clip : longest
+//   );
+// }
+
+
+const CLIP_INDEX_OVERRIDES: Record<string, number> = {
+  help: 1,
+  wait: 1,
+};
+
+function getClipForModel(name: string, animations: THREE.AnimationClip[]): THREE.AnimationClip | null {
   if (!animations || animations.length === 0) return null;
+  
+  if (name in CLIP_INDEX_OVERRIDES) {
+    const index = CLIP_INDEX_OVERRIDES[name];
+    const clip = animations[index];
+    if (clip) return clip;
+    console.warn(`[SIGNMEET] Override index ${index} not found for "${name}", falling back to longest`);
+  }
+
   return animations.reduce((longest, clip) =>
     clip.duration > longest.duration ? clip : longest
   );
@@ -74,7 +95,8 @@ export const AvatarController = ({ queue, onAnimationFinished }: any) => {
     yesterday: useGLTF(MODELS.yesterday),
     no: useGLTF(MODELS.no),
     problem: useGLTF(MODELS.problem),
-    // help: useGLTF(MODELS.help), // DISABLED: help.glb missing
+    wait: useGLTF(MODELS.wait),
+    help: useGLTF(MODELS.help),
   };
 
   // 2. Prepare Animations (The "Nuclear" Retargeting)
@@ -91,10 +113,13 @@ export const AvatarController = ({ queue, onAnimationFinished }: any) => {
       }
     });
 
+    console.log(`[SIGNMEET] wait clips:`, gltfs.wait.animations.map((c, i) => `[${i}] "${c.name}" (${c.duration.toFixed(2)}s)`));
+
     Object.entries(gltfs).forEach(([name, gltf]) => {
       // Automatically pick the longest clip — sign animations are always longer
       // than T-pose/setup clips (~0.5s). This removes all index guessing.
-      const originalClip = getLongestClip(gltf.animations);
+      // const originalClip = getLongestClip(gltf.animations);
+      const originalClip = getClipForModel(name, gltf.animations);
 
       if (!originalClip) {
         console.warn(`[SIGNMEET] No animation found in "${name}.glb". Skipping.`);

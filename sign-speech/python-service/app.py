@@ -25,7 +25,7 @@ CONFIRMATION_FRAMES = 7
 
 CLASS_NAMES = [
     "alright", "cool", "finish", "good", "hello", "help", "job", "me", "meeting", "new",
-    "no", "now", "problem", "secretary", "send", "sorry", "start", "team", "technology", "thank you",
+    "no", "now", "problem", "secretary", "send", "sorry", "start", "team", "technology", "thank",
     "tomorrow", "wait", "we", "what", "yesterday", "you"
 ]
 

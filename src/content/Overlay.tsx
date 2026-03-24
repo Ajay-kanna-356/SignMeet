@@ -1,4 +1,3 @@
-
 // src/content/Overlay.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
@@ -9,13 +8,30 @@ import { SignCapture } from './SignCapture';
 
 type AppMode = 'OFF' | 'SPEECH_IMPAIRED' | 'NORMAL';
 
+// ── Design tokens — change these to retheme the entire extension ──────────────
+const C = {
+  blue:        'rgb(66, 133, 244)',          // primary accent (Google blue)
+  blueDim:     'rgba(66, 133, 244, 0.12)',   // subtle blue tint for active panels
+  blueBorder:  'rgba(66, 133, 244, 0.30)',   // border when active
+  blueGlow:    '0 0 32px rgba(66, 133, 244, 0.45)',
+  blueText:    'rgb(149, 190, 255)',          // softer blue for headings / labels
+  bgPanel:     'rgba(12, 12, 14, 0.97)',
+  bgCard:      'rgba(255, 255, 255, 0.04)',
+  bgButton:    'rgba(255, 255, 255, 0.07)',
+  border:      'rgba(255, 255, 255, 0.08)',
+  borderStrong:'rgba(255, 255, 255, 0.13)',
+  textPrimary: '#ffffff',
+  textMuted:   'rgba(255, 255, 255, 0.45)',
+  textCaption: 'rgba(255, 255, 255, 0.28)',
+  shadow:      '0 16px 40px rgba(0, 0, 0, 0.85)',
+};
+
 export const Overlay = () => {
   const [mode, setMode] = useState<AppMode>('OFF');
   const [queue, setQueue] = useState<string[]>([]);
   const [captionsText, setCaptionsText] = useState("System Ready");
   const [detectedSign, setDetectedSign] = useState("");
 
-  // 1. Use useRef instead of useMemo for the class instance
   const manager = useRef(new SpeechManager((newQueue) => {
     setQueue([...newQueue]);
   }));
@@ -31,7 +47,6 @@ export const Overlay = () => {
 
       speechCapture = new MeetCaptionCapture((text) => {
         setCaptionsText(text);
-        // 2. Use .current here
         manager.current.processSentence(text);
       });
       speechCapture.start();
@@ -42,7 +57,7 @@ export const Overlay = () => {
 
       const speakText = (text: string) => {
         if ('speechSynthesis' in window) {
-          const utterance = new SpeechSynthesisUtterance(text.toLowerCase()); // Speak naturally
+          const utterance = new SpeechSynthesisUtterance(text.toLowerCase());
           utterance.rate = 1;
           window.speechSynthesis.speak(utterance);
         }
@@ -56,7 +71,6 @@ export const Overlay = () => {
         }
       });
       signCapture.start();
-
     } else {
       setCaptionsText("Avatar Paused");
       setDetectedSign("");
@@ -76,22 +90,50 @@ export const Overlay = () => {
     }, 100);
   };
 
-
   const handleChildConsumed = () => {
     setQueue([]);
+  };
+
+  // ── Reusable style helper ────────────────────────────────────────────────────
+  const modeBtn = (active: boolean) => ({
+    flex: 1,
+    padding: '11px 8px',
+    borderRadius: '8px',
+    background:  active ? C.blue      : C.bgButton,
+    color:       active ? '#fff'       : C.textMuted,
+    border:      `1px solid ${active ? C.blueBorder : C.border}`,
+    cursor: 'pointer',
+    fontSize: '11px',
+    fontWeight: 'bold' as const,
+    letterSpacing: '0.4px',
+    transition: 'all 0.2s ease',
+    boxShadow: active ? `0 2px 14px rgba(66,133,244,0.4)` : 'none',
+  });
+
+  const infoPanel = {
+    background: C.blueDim,
+    padding: '12px',
+    borderRadius: '10px',
+    border: `1px solid ${C.blueBorder}`,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '10px',
   };
 
   return (
     <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 999999 }}>
 
-      {/* AVATAR CONTAINER */}
+      {/* ── AVATAR CONTAINER ── */}
       <div style={{
         position: 'absolute', bottom: 20, right: 20, width: 250, height: 300,
-        background: 'rgba(255,255,255,0.05)', borderRadius: '20px',
-        border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(5px)',
+        background: C.bgCard,
+        borderRadius: '20px',
+        border: `1px solid ${C.border}`,
+        backdropFilter: 'blur(8px)',
         opacity: mode === 'SPEECH_IMPAIRED' || (mode === 'OFF' && queue.length > 0) ? 1 : 0,
         pointerEvents: 'none',
-        transition: 'opacity 0.5s'
+        transition: 'opacity 0.5s',
+        boxShadow: C.blueGlow,
       }}>
         <Canvas camera={{ position: [0, 0.2, 1.5], fov: 40 }} gl={{ alpha: true }}>
           <ambientLight intensity={1.5} />
@@ -103,91 +145,112 @@ export const Overlay = () => {
         </Canvas>
       </div>
 
-      {/* OVERLAY (Top Center) */}
+      {/* ── SIGN DETECTED OVERLAY (Top Center) ── */}
       {detectedSign && mode === 'NORMAL' && (
         <div style={{
           position: 'absolute', top: '10%', left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(0,0,0,0.85)', padding: '15px 40px', borderRadius: '40px',
-          color: '#0f0', fontSize: '32px', fontWeight: 'bold',
-          border: '3px solid #0f0', backdropFilter: 'blur(10px)',
-          boxShadow: '0 0 40px rgba(0,255,0,0.6)',
-          pointerEvents: 'none', letterSpacing: '2px'
+          background: 'rgba(0,0,0,0.88)', padding: '15px 40px', borderRadius: '40px',
+          color: C.blue, fontSize: '32px', fontWeight: 'bold',
+          border: `3px solid ${C.blue}`, backdropFilter: 'blur(10px)',
+          boxShadow: C.blueGlow,
+          pointerEvents: 'none', letterSpacing: '2px',
         }}>
           ✋ {detectedSign}
         </div>
       )}
 
-
-      {/* CONTROL PANEL */}
+      {/* ── CONTROL PANEL ── */}
       <div style={{
         position: 'absolute', bottom: '30px', left: '30px', pointerEvents: 'auto',
-        background: 'rgba(15,15,15,0.95)', color: 'white', padding: '20px',
-        borderRadius: '16px', border: '1px solid #333', width: '320px',
-        fontFamily: 'system-ui, sans-serif', boxShadow: '0 12px 32px rgba(0,0,0,0.8)',
-        display: 'flex', flexDirection: 'column', gap: '15px'
+        background: C.bgPanel, color: C.textPrimary, padding: '18px',
+        borderRadius: '16px', border: `1px solid ${C.borderStrong}`, width: '320px',
+        fontFamily: 'system-ui, sans-serif', boxShadow: C.shadow,
+        display: 'flex', flexDirection: 'column', gap: '14px',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '10px' }}>
-          <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f0', textTransform: 'uppercase', letterSpacing: '1px' }}>SignMeet Beta</span>
-          <div style={{
-            fontSize: '10px', padding: '4px 8px', borderRadius: '4px', background: '#333', color: '#aaa'
+
+        {/* Header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          borderBottom: `1px solid ${C.border}`, paddingBottom: '12px',
+        }}>
+          <span style={{
+            fontSize: '15px', fontWeight: 'bold', color: C.blueText,
+            textTransform: 'uppercase', letterSpacing: '1.5px',
           }}>
-            {mode === 'OFF' ? 'SERVICE IDLE' : mode.replace('_', ' ')}
+            SignMeet
+          </span>
+          <div style={{
+            fontSize: '10px', padding: '3px 9px', borderRadius: '4px',
+            background: mode !== 'OFF' ? C.blueDim  : C.bgButton,
+            color:      mode !== 'OFF' ? C.blue      : C.textMuted,
+            border:     `1px solid ${mode !== 'OFF' ? C.blueBorder : C.border}`,
+            fontWeight: 'bold', letterSpacing: '0.5px',
+          }}>
+            {mode === 'OFF' ? 'IDLE' : mode.replace('_', ' ')}
           </div>
         </div>
 
+        {/* Mode Buttons */}
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
             onClick={() => setMode(mode === 'SPEECH_IMPAIRED' ? 'OFF' : 'SPEECH_IMPAIRED')}
-            style={{
-              flex: 1, padding: '12px 8px', borderRadius: '8px',
-              background: mode === 'SPEECH_IMPAIRED' ? '#0f0' : '#222',
-              color: mode === 'SPEECH_IMPAIRED' ? '#000' : '#fff',
-              border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold',
-              transition: '0.2s all'
-            }}
+            style={modeBtn(mode === 'SPEECH_IMPAIRED')}
           >
-            Listening Mode
+            🎧 Listening Mode
           </button>
           <button
             onClick={() => setMode(mode === 'NORMAL' ? 'OFF' : 'NORMAL')}
-            style={{
-              flex: 1, padding: '12px 8px', borderRadius: '8px',
-              background: mode === 'NORMAL' ? 'rgb(186, 217, 246)' : '#222',
-              color: mode === 'NORMAL' ? '#000' : '#fff',
-              border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold',
-              transition: '0.2s all'
-            }}
+            style={modeBtn(mode === 'NORMAL')}
           >
-            Speaking mode
+            ✋ Speaking Mode
           </button>
         </div>
 
-        {/* MODE UI */}
+        {/* Listening Mode Panel */}
         {mode === 'SPEECH_IMPAIRED' && (
-          <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px' }}>
-            <div style={{ fontSize: '11px', color: '#888', marginBottom: '8px' }}>Avatar translating speech to signs...</div>
-            <button onClick={handleTestAvatar} style={{ width: '100%', padding: '8px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>
-              Run Avatar Demo
+          <div style={infoPanel}>
+            <div style={{ fontSize: '11px', color: C.textMuted }}>
+              Avatar translating speech to signs...
+            </div>
+            <button
+              onClick={handleTestAvatar}
+              style={{
+                width: '100%', padding: '9px', borderRadius: '6px', cursor: 'pointer',
+                fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.4px',
+                background: C.blue, color: '#fff', border: 'none',
+                boxShadow: `0 2px 10px rgba(66,133,244,0.35)`,
+                transition: 'opacity 0.2s',
+              }}
+            >
+              ▶ Run Avatar Demo
             </button>
-            <div style={{ marginTop: '8px', fontSize: '11px', color: '#0f0', fontStyle: 'italic', opacity: 0.7 }}>
-              📡 {captionsText.length > 30 ? captionsText.substring(0, 30) + "..." : captionsText}
+            <div style={{
+              fontSize: '11px', color: C.blueText, fontStyle: 'italic',
+              display: 'flex', alignItems: 'center', gap: '6px',
+            }}>
+              <span>📡</span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {captionsText.length > 30 ? captionsText.substring(0, 30) + '…' : captionsText}
+              </span>
             </div>
           </div>
         )}
 
+        {/* Speaking Mode Panel */}
         {mode === 'NORMAL' && (
-          <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px' }}>
-            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px' }}>
-              <div style={{ fontSize: '11px', color: '#888', marginBottom: '8px' }}>Capturing signs from camera...</div>
-              <div style={{ marginTop: '8px', fontSize: '11px', color: '#0f0', fontStyle: 'italic', opacity: 0.7 }}>
-                Target: {detectedSign || "Waiting for signs..."}
-              </div>
+          <div style={infoPanel}>
+            <div style={{ fontSize: '11px', color: C.textMuted }}>
+              Capturing signs from camera...
+            </div>
+            <div style={{ fontSize: '11px', color: C.blueText, fontStyle: 'italic' }}>
+               {detectedSign || 'Waiting for signs...'}
             </div>
           </div>
         )}
 
+        {/* Off State */}
         {mode === 'OFF' && (
-          <div style={{ textAlign: 'center', padding: '10px', color: '#555', fontSize: '11px' }}>
+          <div style={{ textAlign: 'center', padding: '8px', color: C.textCaption, fontSize: '11px' }}>
             Select a mode above to begin.
           </div>
         )}

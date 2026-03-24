@@ -5,34 +5,27 @@ const DICTIONARY: Record<string, string> = {
   'cool': 'cool', 'awesome': 'cool',
   'good': 'good', 'great': 'good',
   'alright': 'alright', 'ok': 'alright', 'okay': 'alright',
-
   'technology': 'technology', 'tech': 'technology',
   'job': 'job', 'work': 'job',
   'new': 'new', 'fresh': 'new',
   'secretary': 'secretary', 'assistant': 'secretary',
-
   'sorry': 'sorry', 'apologize': 'sorry', 'apology': 'sorry',
   'team': 'team', 'group': 'team',
-  'thank you': 'thankyou', 'thanks': 'thankyou',
-
+  'thank you': 'thankyou', 'thanks': 'thankyou','thank':'thankyou',
   // Newly added
   'finish': 'finish', 'end': 'finish', 'complete': 'finish',
   'start': 'start', 'begin': 'start',
   'meeting': 'meeting', 'meet': 'meeting',
-
   'we': 'we', 'us': 'we',
   'you': 'you',
   'me': 'me', 'i': 'me',
-
   'what': 'what',
-
   'tomorrow': 'tomorrow',
   'yesterday': 'yesterday',
-
-  // 'help': 'help', 'assist': 'help', // DISABLED: help.glb missing from public/assets — add the file to re-enable
   'no': 'no', 'not': 'no',
-
   'problem': 'problem', 'issue': 'problem',
+  'help': 'help', 'assist': 'help',
+  'wait': 'wait', 'stop': 'wait', 'halt': 'wait',
 };
 
 export class SpeechManager {
@@ -44,16 +37,16 @@ export class SpeechManager {
   constructor(onQueueUpdate: (queue: string[]) => void) {
     this.onQueueChange = onQueueUpdate;
   }
-
-  public processSentence(sentence: string) {
-    // 1. Clean the incoming sentence
-    const cleanSentence = sentence.trim().toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
-
-    if (!cleanSentence) return;
-
-    // 2. Split into words immediately
-    const currentWords = cleanSentence.split(/\s+/);
-
+ // AFTER
+public processSentence(sentence: string) {
+  const cleanSentence = sentence.trim().toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
+  if (!cleanSentence) return;
+  // Replace multi-word phrases before splitting
+  const phraseNormalized = cleanSentence
+  .replace(/\bthank you\b/g, 'thankyou');
+  console.log(`[SIGNMEET] raw: "${cleanSentence}" | normalized: "${phraseNormalized}"`);
+  // 2. Split into words immediately
+  const currentWords = phraseNormalized.split(/\s+/);
     // 3. Find the divergence point
     // We compare the new word list with the old one index by index.
     // As soon as we find a mismatch, we consider everything from that point onwards as "new".
@@ -66,18 +59,13 @@ export class SpeechManager {
       }
       diffIndex++;
     }
-
     // 4. Extract only the NEW words (from diffIndex to the end)
     const newWords = currentWords.slice(diffIndex);
-
     // Update memory to the current state
     this.lastProcessedWords = currentWords;
-
     if (newWords.length === 0) return;
-
     // 5. Process the new words for animations
     const newAnims: string[] = [];
-
     newWords.forEach(word => {
       if (DICTIONARY[word]) {
         newAnims.push(DICTIONARY[word]);
