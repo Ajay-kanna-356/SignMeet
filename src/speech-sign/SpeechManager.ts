@@ -26,6 +26,7 @@ const DICTIONARY: Record<string, string> = {
   'problem': 'problem', 'issue': 'problem',
   'help': 'help', 'assist': 'help',
   'wait': 'wait', 'stop': 'wait', 'halt': 'wait',
+  'now': 'now', 'hold on': 'wait',
 };
 
 export class SpeechManager {
@@ -45,7 +46,7 @@ public processSentence(sentence: string) {
   if (!cleanSentence) return;
   console.log(`[SIGNMEET] raw: "${cleanSentence}" | normalized: "${phraseNormalized}"`);
   // 2. Split into words immediately
-  const currentWords = phraseNormalized.split(/\s+/);
+  const currentWords = cleanSentence.split(/\s+/);
     // 3. Find the divergence point
     // We compare the new word list with the old one index by index.
     // As soon as we find a mismatch, we consider everything from that point onwards as "new".

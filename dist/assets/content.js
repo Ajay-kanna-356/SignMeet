@@ -66193,7 +66193,8 @@ No matching component was found for:
     no: chrome.runtime.getURL("assets/no.glb"),
     problem: chrome.runtime.getURL("assets/problem.glb"),
     wait: chrome.runtime.getURL("assets/wait.glb"),
-    help: chrome.runtime.getURL("assets/help.glb")
+    help: chrome.runtime.getURL("assets/help.glb"),
+    now: chrome.runtime.getURL("assets/now.glb")
   };
   const CLIP_INDEX_OVERRIDES = {
     help: 1,
@@ -66241,7 +66242,8 @@ No matching component was found for:
       no: useGLTF(MODELS.no),
       problem: useGLTF(MODELS.problem),
       wait: useGLTF(MODELS.wait),
-      help: useGLTF(MODELS.help)
+      help: useGLTF(MODELS.help),
+      now: useGLTF(MODELS.now)
     };
     const animations = reactExports.useMemo(() => {
       const clips = [];
@@ -66383,7 +66385,9 @@ No matching component was found for:
     "assist": "help",
     "wait": "wait",
     "stop": "wait",
-    "halt": "wait"
+    "halt": "wait",
+    "now": "now",
+    "right now": "now",
   };
   class SpeechManager {
     constructor(onQueueUpdate) {
@@ -66741,7 +66745,7 @@ No matching component was found for:
             {
               onClick: () => setMode(mode === "SPEECH_IMPAIRED" ? "OFF" : "SPEECH_IMPAIRED"),
               style: modeBtn(mode === "SPEECH_IMPAIRED"),
-              children: "🎧 Listening Mode"
+              children: "Listening Mode"
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -66749,7 +66753,7 @@ No matching component was found for:
             {
               onClick: () => setMode(mode === "NORMAL" ? "OFF" : "NORMAL"),
               style: modeBtn(mode === "NORMAL"),
-              children: "✋ Speaking Mode"
+              children: "Speaking Mode"
             }
           )
         ] }),

@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useGLTF, useAnimations } from '@react-three/drei';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
+import { now } from '@tweenjs/tween.js';
 
 const MODELS = {
   idle: chrome.runtime.getURL('assets/idle.glb'),
@@ -31,6 +32,7 @@ const MODELS = {
   problem: chrome.runtime.getURL('assets/problem.glb'),
   wait: chrome.runtime.getURL('assets/wait.glb'),
   help: chrome.runtime.getURL('assets/help.glb'),
+  now: chrome.runtime.getURL('assets/now.glb'),
 };
 
 // Always pick the animation clip with the longest duration.
@@ -97,6 +99,7 @@ export const AvatarController = ({ queue, onAnimationFinished }: any) => {
     problem: useGLTF(MODELS.problem),
     wait: useGLTF(MODELS.wait),
     help: useGLTF(MODELS.help),
+    now: useGLTF(MODELS.now),
   };
 
   // 2. Prepare Animations (The "Nuclear" Retargeting)

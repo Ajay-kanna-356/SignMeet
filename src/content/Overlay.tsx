@@ -196,13 +196,13 @@ export const Overlay = () => {
             onClick={() => setMode(mode === 'SPEECH_IMPAIRED' ? 'OFF' : 'SPEECH_IMPAIRED')}
             style={modeBtn(mode === 'SPEECH_IMPAIRED')}
           >
-            🎧 Listening Mode
+            Listening Mode
           </button>
           <button
             onClick={() => setMode(mode === 'NORMAL' ? 'OFF' : 'NORMAL')}
             style={modeBtn(mode === 'NORMAL')}
           >
-            ✋ Speaking Mode
+            Speaking Mode
           </button>
         </div>
 
