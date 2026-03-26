@@ -16,6 +16,7 @@ export class CameraController {
     private animationFrameId: number | null = null;
     private debugText: HTMLDivElement;
     private stream: MediaStream | null = null;
+    private voicePref: string = 'MALE'; // default until told otherwise
 
     constructor() {
         this.videoElement = document.getElementById('input_video') as HTMLVideoElement;
@@ -43,6 +44,14 @@ export class CameraController {
         });
 
         this.holistic.onResults(this.onResults.bind(this));
+
+        // Listen for voicePref updates sent from the parent page (Overlay.tsx)
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'VOICE_PREF') {
+                this.voicePref = event.data.pref;
+                console.log('[SIGNMEET] Voice pref updated to:', this.voicePref);
+            }
+        });
     }
 
     public async start() {
@@ -139,10 +148,20 @@ export class CameraController {
     private async sendKeypoints(keypoints: number[]) {
         this.isSending = true;
         try {
+            // Read voicePref from chrome.storage.local (shared with the content script)
+            const storageResult = await new Promise<Record<string, string>>((resolve) => {
+                chrome.storage.local.get(['signmeet_voice_pref'], (result) => resolve(result as Record<string, string>));
+            });
+            const voicePref = storageResult['signmeet_voice_pref'] || 'MALE';
+
             const response = await fetch('http://localhost:3000/process-sign', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: this.USER_ID, keypoints })
+                body: JSON.stringify({ 
+                    userId: this.USER_ID, 
+                    keypoints,
+                    voicePref
+                })
             });
             const data = await response.json();
 

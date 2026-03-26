@@ -42,13 +42,20 @@ export class SignCapture {
             this.iframe = document.createElement('iframe');
             this.iframe.src = chrome.runtime.getURL('camera.html');
             this.iframe.style.cssText = "width: 100%; height: 100%; border: none;";
-            this.iframe.allow = "camera; microphone"; // Important for permissions
+            this.iframe.allow = "camera; microphone";
             this.container.appendChild(this.iframe);
             document.body.appendChild(this.container);
         }
 
         this.container.style.display = 'block';
         this.isVisible = true;
+    }
+
+    // Call this whenever the user changes the voice preference dropdown
+    public setVoicePref(pref: string) {
+        if (this.iframe && this.iframe.contentWindow) {
+            this.iframe.contentWindow.postMessage({ type: 'VOICE_PREF', pref }, '*');
+        }
     }
 
     public stop() {
