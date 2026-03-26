@@ -5396,6 +5396,7 @@ function requireDrawing_utils() {
 var drawing_utilsExports = /* @__PURE__ */ requireDrawing_utils();
 console.log("[SIGNMEET] Camera Page Loaded");
 class CameraController {
+  // default until told otherwise
   constructor() {
     this.isProcessing = false;
     this.lastSent = 0;
@@ -5404,6 +5405,7 @@ class CameraController {
     this.USER_ID = "extension_user_" + Math.floor(Math.random() * 1e3);
     this.animationFrameId = null;
     this.stream = null;
+    this.voicePref = "MALE";
     this.videoElement = document.getElementById("input_video");
     this.canvas = document.getElementById("output_canvas");
     this.ctx = this.canvas.getContext("2d");
@@ -5421,6 +5423,12 @@ class CameraController {
       minTrackingConfidence: 0.5
     });
     this.holistic.onResults(this.onResults.bind(this));
+    window.addEventListener("message", (event) => {
+      if (event.data && event.data.type === "VOICE_PREF") {
+        this.voicePref = event.data.pref;
+        console.log("[SIGNMEET] Voice pref updated to:", this.voicePref);
+      }
+    });
   }
   async start() {
     try {
@@ -5496,10 +5504,18 @@ class CameraController {
   async sendKeypoints(keypoints) {
     this.isSending = true;
     try {
+      const storageResult = await new Promise((resolve) => {
+        chrome.storage.local.get(["signmeet_voice_pref"], (result) => resolve(result));
+      });
+      const voicePref = storageResult["signmeet_voice_pref"] || "MALE";
       const response = await fetch("http://localhost:3000/process-sign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: this.USER_ID, keypoints })
+        body: JSON.stringify({
+          userId: this.USER_ID,
+          keypoints,
+          voicePref
+        })
       });
       const data = await response.json();
       let displayText = "";

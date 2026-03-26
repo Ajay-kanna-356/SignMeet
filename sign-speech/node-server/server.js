@@ -15,7 +15,7 @@ app.use(bodyParser.json({ limit: '10mb' }));
 // The Frontend calls this continuously with MediaPipe Keypoints
 app.post('/process-sign', async (req, res) => {
     try {
-        const { userId, keypoints } = req.body;
+        const { userId, keypoints, voicePref } = req.body;
         if (!userId || !keypoints) {
             return res.status(400).json({ error: "Missing userId or keypoints data" });
         }
@@ -25,7 +25,8 @@ app.post('/process-sign', async (req, res) => {
         // Forward to Python AI Service
         const pythonResponse = await axios.post(`${PYTHON_SERVICE_URL}/predict`, {
             userId: userId,
-            keypoints: keypoints
+            keypoints: keypoints,
+            voicePref: voicePref || 'MALE'
         });
 
         // Return the prediction (or null) back to Frontend

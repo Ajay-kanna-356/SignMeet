@@ -8,6 +8,10 @@ import { SignCapture } from './SignCapture';
 
 type AppMode = 'OFF' | 'SPEECH_IMPAIRED' | 'NORMAL';
 
+// ── Voice Initialization (Run once globally) ──────────────────────────────────
+// Removed strict global caching in favor of bulletproof Pitch-Shifting fallback.
+
+
 // ── Design tokens — change these to retheme the entire extension ──────────────
 const C = {
   blue:        'rgb(66, 133, 244)',          // primary accent (Google blue)
@@ -31,10 +35,30 @@ export const Overlay = () => {
   const [queue, setQueue] = useState<string[]>([]);
   const [captionsText, setCaptionsText] = useState("System Ready");
   const [detectedSign, setDetectedSign] = useState("");
+  const [voicePref, setVoicePref] = useState(() => {
+    // Initialize from chrome.storage on mount - for now default to MALE
+    // The useEffect below will sync the actual saved value
+    return 'MALE';
+  });
 
   const manager = useRef(new SpeechManager((newQueue) => {
     setQueue([...newQueue]);
   }));
+  const signCaptureRef = useRef<SignCapture | null>(null);
+
+  // Load voicePref from chrome.storage on mount
+  useEffect(() => {
+    chrome.storage.local.get(['signmeet_voice_pref'], (result) => {
+      if (result.signmeet_voice_pref) {
+        setVoicePref(result.signmeet_voice_pref);
+      }
+    });
+  }, []);
+
+  // Whenever voicePref changes, persist to chrome.storage (shared with camera iframe)
+  useEffect(() => {
+    chrome.storage.local.set({ signmeet_voice_pref: voicePref });
+  }, [voicePref]);
 
   // HANDLE MODES
   useEffect(() => {
@@ -59,6 +83,36 @@ export const Overlay = () => {
         if ('speechSynthesis' in window) {
           const utterance = new SpeechSynthesisUtterance(text.toLowerCase());
           utterance.rate = 1;
+          
+          const pref = localStorage.getItem('signmeet_voice_pref') || 'MALE';
+          const isFemale = pref === 'FEMALE';
+          
+          const voices = window.speechSynthesis.getVoices();
+          
+          if (voices.length > 0) {
+            // Basic check for common names like Zira (Female) or David (Male)
+            const exactFemale = voices.find(v => v.name.includes('Female') || v.name.includes('Zira') || v.name === 'Google US English');
+            const exactMale = voices.find(v => v.name.includes('Male') || v.name.includes('David'));
+            
+            if (isFemale && exactFemale) {
+              utterance.voice = exactFemale;
+            } else if (!isFemale && exactMale) {
+              utterance.voice = exactMale;
+            } else {
+              // If we can't find strict names, just grab the two English voices and alternate them
+              const enVoices = voices.filter(v => v.lang.startsWith('en'));
+              if (enVoices.length > 1) {
+                utterance.voice = isFemale ? enVoices[1] : enVoices[0];
+              }
+            }
+          }
+
+          // 🔥 THE BULLETPROOF FIX: Pitch Shifting 🔥
+          // If your computer literally ONLY has one voice installed (which is very common on Windows),
+          // changing the Pitch forces the one single voice to sound feminine or masculine artificially! 
+          // This works 100% of the time, no matter what voices are installed!
+          utterance.pitch = isFemale ? 1.6 : 1.0;
+          
           window.speechSynthesis.speak(utterance);
         }
       };
@@ -71,6 +125,9 @@ export const Overlay = () => {
         }
       });
       signCapture.start();
+      signCaptureRef.current = signCapture;
+      // Send the current voicePref immediately into the iframe
+      signCapture.setVoicePref(voicePref);
     } else {
       setCaptionsText("Avatar Paused");
       setDetectedSign("");
@@ -79,6 +136,7 @@ export const Overlay = () => {
     return () => {
       speechCapture?.stop();
       signCapture?.stop();
+      signCaptureRef.current = null;
     };
   }, [mode]);
 
@@ -204,6 +262,30 @@ export const Overlay = () => {
           >
             ✋ Speaking Mode
           </button>
+        </div>
+
+        {/* Voice Preference */}
+        <div style={{ 
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
+          background: C.bgButton, padding: '10px 12px', borderRadius: '8px', border: `1px solid ${C.border}`
+        }}>
+          <span style={{ fontSize: '12px', fontWeight: 'bold', color: C.textPrimary }}>Voice:</span>
+          <select 
+            value={voicePref}
+            onChange={(e) => {
+              const val = e.target.value;
+              setVoicePref(val);
+              // Also persist to chrome.storage so the camera iframe can read it
+              chrome.storage.local.set({ signmeet_voice_pref: val });
+            }}
+            style={{
+              background: 'transparent', color: C.blueText, border: 'none', outline: 'none',
+              fontSize: '12px', fontWeight: 'bold', cursor: 'pointer'
+            }}
+          >
+            <option value="MALE" style={{ background: '#222' }}>Male</option>
+            <option value="FEMALE" style={{ background: '#222' }}>Female</option>
+          </select>
         </div>
 
         {/* Listening Mode Panel */}

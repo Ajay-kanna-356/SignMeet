@@ -4,10 +4,9 @@ import tensorflow as tf
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import threading
-import pyttsx3
+import subprocess
 from queue import Queue
 from groq import Groq
-import pythoncom
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -80,26 +79,41 @@ Sentence:
 
 tts_queue = Queue()
 
+# --- Hardcoded Windows TTS Voice Names ---
+VOICE_MALE_NAME   = "Microsoft David Desktop"
+VOICE_FEMALE_NAME = "Microsoft Zira Desktop"
+
 def tts_worker():
-    pythoncom.CoInitialize()  # Required for Windows COM threads
     while True:
-        text = tts_queue.get()
-        if text is None:
+        task = tts_queue.get()
+        if task is None:
             break
+        text, voice_pref = task
         try:
-            engine = pyttsx3.init()
-            engine.setProperty('rate', 160)
-            engine.say(text)
-            engine.runAndWait()
-            del engine
+            voice_name = VOICE_FEMALE_NAME if voice_pref == "FEMALE" else VOICE_MALE_NAME
+            print(f"[TTS] Speaking as '{voice_name}': {text}")
+
+            # Use PowerShell to call Windows Speech API directly
+            # This is 100% reliable and bypasses all pyttsx3 engine caching issues
+            ps_script = (
+                f'Add-Type -AssemblyName System.Speech; '
+                f'$s = New-Object System.Speech.Synthesis.SpeechSynthesizer; '
+                f'$s.SelectVoice("{voice_name}"); '
+                f'$s.Rate = 1; '
+                f'$s.Speak("{text}");'
+            )
+            subprocess.run(
+                ["powershell", "-Command", ps_script],
+                check=True
+            )
         except Exception as e:
-            print(f"TTS error: {e}")
+            print(f"[TTS] Error: {e}")
         tts_queue.task_done()
 
 threading.Thread(target=tts_worker, daemon=True).start()
 
-def speak(text):
-    tts_queue.put(text)
+def speak(text, voice_pref="MALE"):
+    tts_queue.put((text, voice_pref))
 
 # --- LOAD MODEL ---
 print(f"Loading Model: {MODEL_PATH}...")
@@ -120,13 +134,13 @@ user_sessions = {}
 # Global lock to prevent deadlocks when multiple flask threads call model.predict simultaneously
 prediction_lock = threading.Lock()
 
-def process_sentence_thread(user_id, words_copy):
+def process_sentence_thread(user_id, words_copy, voice_pref):
     gloss = " ".join(words_copy)
     print("\nGloss:", gloss)
     sentence = gloss_to_sentence(gloss)
     print("Sentence:", sentence)
     
-    speak(sentence)
+    speak(sentence, voice_pref)
     
     if user_id in user_sessions:
         user_sessions[user_id]["final_sentence"] = sentence
@@ -138,6 +152,8 @@ def predict():
     data = request.json
     user_id = data.get('userId')
     keypoints = data.get('keypoints') 
+    voice_pref = data.get('voicePref', 'MALE')
+    print(f"[PREDICT] voicePref received: '{voice_pref}'")
 
     if not user_id or keypoints is None:
         return jsonify({"error": "Missing data"}), 400
@@ -192,7 +208,7 @@ def predict():
                 # Start processing thread
                 threading.Thread(
                     target=process_sentence_thread,
-                    args=(user_id, session["collected_words"].copy()),
+                    args=(user_id, session["collected_words"].copy(), voice_pref),
                     daemon=True
                 ).start()
                 

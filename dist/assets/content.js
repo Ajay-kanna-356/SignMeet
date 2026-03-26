@@ -66356,7 +66356,7 @@ No matching component was found for:
     "apology": "sorry",
     "team": "team",
     "group": "team",
-    "thank you": "thankyou",
+    "thankyou": "thankyou",
     "thanks": "thankyou",
     "thank": "thankyou",
     // Newly added
@@ -66372,7 +66372,9 @@ No matching component was found for:
     "you": "you",
     "me": "me",
     "i": "me",
+    "im": "me",
     "what": "what",
+    "whats": "what",
     "tomorrow": "tomorrow",
     "yesterday": "yesterday",
     "no": "no",
@@ -66393,9 +66395,9 @@ No matching component was found for:
     }
     // AFTER
     processSentence(sentence) {
-      const cleanSentence = sentence.trim().toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
+      const phraseNormalized = sentence.trim().toLowerCase().replace(/\bthank you\b/g, "thankyou");
+      const cleanSentence = phraseNormalized.replace(/[.,\/#!?$%^&*;:{}=\-_`~()"'…]/g, "");
       if (!cleanSentence) return;
-      const phraseNormalized = cleanSentence.replace(/\bthank you\b/g, "thankyou");
       console.log(`[SIGNMEET] raw: "${cleanSentence}" | normalized: "${phraseNormalized}"`);
       const currentWords = phraseNormalized.split(/\s+/);
       let diffIndex = 0;
@@ -66523,6 +66525,12 @@ No matching component was found for:
       this.container.style.display = "block";
       this.isVisible = true;
     }
+    // Call this whenever the user changes the voice preference dropdown
+    setVoicePref(pref) {
+      if (this.iframe && this.iframe.contentWindow) {
+        this.iframe.contentWindow.postMessage({ type: "VOICE_PREF", pref }, "*");
+      }
+    }
     stop() {
       console.log("[SIGNMEET] Stopping Camera Iframe...");
       window.removeEventListener("message", this.boundHandleMessage);
@@ -66572,9 +66580,23 @@ No matching component was found for:
     const [queue, setQueue] = reactExports.useState([]);
     const [captionsText, setCaptionsText] = reactExports.useState("System Ready");
     const [detectedSign, setDetectedSign] = reactExports.useState("");
+    const [voicePref, setVoicePref] = reactExports.useState(() => {
+      return "MALE";
+    });
     const manager = reactExports.useRef(new SpeechManager((newQueue) => {
       setQueue([...newQueue]);
     }));
+    const signCaptureRef = reactExports.useRef(null);
+    reactExports.useEffect(() => {
+      chrome.storage.local.get(["signmeet_voice_pref"], (result) => {
+        if (result.signmeet_voice_pref) {
+          setVoicePref(result.signmeet_voice_pref);
+        }
+      });
+    }, []);
+    reactExports.useEffect(() => {
+      chrome.storage.local.set({ signmeet_voice_pref: voicePref });
+    }, [voicePref]);
     reactExports.useEffect(() => {
       let speechCapture = null;
       let signCapture = null;
@@ -66594,6 +66616,24 @@ No matching component was found for:
           if ("speechSynthesis" in window) {
             const utterance = new SpeechSynthesisUtterance(text.toLowerCase());
             utterance.rate = 1;
+            const pref = localStorage.getItem("signmeet_voice_pref") || "MALE";
+            const isFemale = pref === "FEMALE";
+            const voices = window.speechSynthesis.getVoices();
+            if (voices.length > 0) {
+              const exactFemale = voices.find((v) => v.name.includes("Female") || v.name.includes("Zira") || v.name === "Google US English");
+              const exactMale = voices.find((v) => v.name.includes("Male") || v.name.includes("David"));
+              if (isFemale && exactFemale) {
+                utterance.voice = exactFemale;
+              } else if (!isFemale && exactMale) {
+                utterance.voice = exactMale;
+              } else {
+                const enVoices = voices.filter((v) => v.lang.startsWith("en"));
+                if (enVoices.length > 1) {
+                  utterance.voice = isFemale ? enVoices[1] : enVoices[0];
+                }
+              }
+            }
+            utterance.pitch = isFemale ? 1.6 : 1;
             window.speechSynthesis.speak(utterance);
           }
         };
@@ -66605,6 +66645,8 @@ No matching component was found for:
           }
         });
         signCapture.start();
+        signCaptureRef.current = signCapture;
+        signCapture.setVoicePref(voicePref);
       } else {
         setCaptionsText("Avatar Paused");
         setDetectedSign("");
@@ -66612,6 +66654,7 @@ No matching component was found for:
       return () => {
         speechCapture?.stop();
         signCapture?.stop();
+        signCaptureRef.current = null;
       };
     }, [mode]);
     const handleTestAvatar = () => {
@@ -66750,6 +66793,41 @@ No matching component was found for:
               onClick: () => setMode(mode === "NORMAL" ? "OFF" : "NORMAL"),
               style: modeBtn(mode === "NORMAL"),
               children: "✋ Speaking Mode"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          background: C.bgButton,
+          padding: "10px 12px",
+          borderRadius: "8px",
+          border: `1px solid ${C.border}`
+        }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: "12px", fontWeight: "bold", color: C.textPrimary }, children: "Voice:" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: voicePref,
+              onChange: (e2) => {
+                const val = e2.target.value;
+                setVoicePref(val);
+                chrome.storage.local.set({ signmeet_voice_pref: val });
+              },
+              style: {
+                background: "transparent",
+                color: C.blueText,
+                border: "none",
+                outline: "none",
+                fontSize: "12px",
+                fontWeight: "bold",
+                cursor: "pointer"
+              },
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "MALE", style: { background: "#222" }, children: "Male" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FEMALE", style: { background: "#222" }, children: "Female" })
+              ]
             }
           )
         ] }),
