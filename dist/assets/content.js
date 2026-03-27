@@ -66389,7 +66389,7 @@ No matching component was found for:
     "stop": "wait",
     "halt": "wait",
     "now": "now",
-    "right now": "now",
+    "hold on": "wait"
   };
   class SpeechManager {
     constructor(onQueueUpdate) {
@@ -66403,7 +66403,7 @@ No matching component was found for:
       const cleanSentence = phraseNormalized.replace(/[.,\/#!?$%^&*;:{}=\-_`~()"'…]/g, "");
       if (!cleanSentence) return;
       console.log(`[SIGNMEET] raw: "${cleanSentence}" | normalized: "${phraseNormalized}"`);
-      const currentWords = phraseNormalized.split(/\s+/);
+      const currentWords = cleanSentence.split(/\s+/);
       let diffIndex = 0;
       const len = Math.min(this.lastProcessedWords.length, currentWords.length);
       while (diffIndex < len) {
@@ -66587,20 +66587,23 @@ No matching component was found for:
     const [voicePref, setVoicePref] = reactExports.useState(() => {
       return "MALE";
     });
+    const [langPref, setLangPref] = reactExports.useState("en");
     const manager = reactExports.useRef(new SpeechManager((newQueue) => {
       setQueue([...newQueue]);
     }));
     const signCaptureRef = reactExports.useRef(null);
     reactExports.useEffect(() => {
-      chrome.storage.local.get(["signmeet_voice_pref"], (result) => {
-        if (result.signmeet_voice_pref) {
-          setVoicePref(result.signmeet_voice_pref);
-        }
+      chrome.storage.local.get(["signmeet_voice_pref", "signmeet_lang_pref"], (result) => {
+        if (result.signmeet_voice_pref) setVoicePref(result.signmeet_voice_pref);
+        if (result.signmeet_lang_pref) setLangPref(result.signmeet_lang_pref);
       });
     }, []);
     reactExports.useEffect(() => {
       chrome.storage.local.set({ signmeet_voice_pref: voicePref });
     }, [voicePref]);
+    reactExports.useEffect(() => {
+      chrome.storage.local.set({ signmeet_lang_pref: langPref });
+    }, [langPref]);
     reactExports.useEffect(() => {
       let speechCapture = null;
       let signCapture = null;
@@ -66800,40 +66803,80 @@ No matching component was found for:
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          background: C.bgButton,
-          padding: "10px 12px",
-          borderRadius: "8px",
-          border: `1px solid ${C.border}`
-        }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: "12px", fontWeight: "bold", color: C.textPrimary }, children: "Voice:" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              value: voicePref,
-              onChange: (e2) => {
-                const val = e2.target.value;
-                setVoicePref(val);
-                chrome.storage.local.set({ signmeet_voice_pref: val });
-              },
-              style: {
-                background: "transparent",
-                color: C.blueText,
-                border: "none",
-                outline: "none",
-                fontSize: "12px",
-                fontWeight: "bold",
-                cursor: "pointer"
-              },
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "MALE", style: { background: "#222" }, children: "Male" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FEMALE", style: { background: "#222" }, children: "Female" })
-              ]
-            }
-          )
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: "8px" }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            background: C.bgButton,
+            padding: "10px 12px",
+            borderRadius: "8px",
+            border: `1px solid ${C.border}`
+          }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: "11px", fontWeight: "bold", color: C.textPrimary }, children: "🎙 Voice:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                value: voicePref,
+                onChange: (e2) => {
+                  const val = e2.target.value;
+                  setVoicePref(val);
+                  chrome.storage.local.set({ signmeet_voice_pref: val });
+                },
+                style: {
+                  background: "transparent",
+                  color: C.blueText,
+                  border: "none",
+                  outline: "none",
+                  fontSize: "11px",
+                  fontWeight: "bold",
+                  cursor: "pointer"
+                },
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "MALE", style: { background: "#222" }, children: "Male" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FEMALE", style: { background: "#222" }, children: "Female" })
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            background: C.bgButton,
+            padding: "10px 12px",
+            borderRadius: "8px",
+            border: `1px solid ${C.border}`
+          }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: "11px", fontWeight: "bold", color: C.textPrimary }, children: "🌐 Lang:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "select",
+              {
+                value: langPref,
+                onChange: (e2) => {
+                  const val = e2.target.value;
+                  setLangPref(val);
+                  chrome.storage.local.set({ signmeet_lang_pref: val });
+                },
+                style: {
+                  background: "transparent",
+                  color: C.blueText,
+                  border: "none",
+                  outline: "none",
+                  fontSize: "11px",
+                  fontWeight: "bold",
+                  cursor: "pointer"
+                },
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "en", style: { background: "#222" }, children: "English" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "hi", style: { background: "#222" }, children: "Hindi" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ta", style: { background: "#222" }, children: "Tamil" })
+                ]
+              }
+            )
+          ] })
         ] }),
         mode === "SPEECH_IMPAIRED" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: infoPanel, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "11px", color: C.textMuted }, children: "Avatar translating speech to signs..." }),

@@ -148,11 +148,12 @@ export class CameraController {
     private async sendKeypoints(keypoints: number[]) {
         this.isSending = true;
         try {
-            // Read voicePref from chrome.storage.local (shared with the content script)
+            // Read voicePref and langPref from chrome.storage.local (shared with the content script)
             const storageResult = await new Promise<Record<string, string>>((resolve) => {
-                chrome.storage.local.get(['signmeet_voice_pref'], (result) => resolve(result as Record<string, string>));
+                chrome.storage.local.get(['signmeet_voice_pref', 'signmeet_lang_pref'], (result) => resolve(result as Record<string, string>));
             });
             const voicePref = storageResult['signmeet_voice_pref'] || 'MALE';
+            const langPref = storageResult['signmeet_lang_pref'] || 'en';
 
             const response = await fetch('http://localhost:3000/process-sign', {
                 method: 'POST',
@@ -160,7 +161,8 @@ export class CameraController {
                 body: JSON.stringify({ 
                     userId: this.USER_ID, 
                     keypoints,
-                    voicePref
+                    voicePref,
+                    langPref
                 })
             });
             const data = await response.json();

@@ -5505,16 +5505,18 @@ class CameraController {
     this.isSending = true;
     try {
       const storageResult = await new Promise((resolve) => {
-        chrome.storage.local.get(["signmeet_voice_pref"], (result) => resolve(result));
+        chrome.storage.local.get(["signmeet_voice_pref", "signmeet_lang_pref"], (result) => resolve(result));
       });
       const voicePref = storageResult["signmeet_voice_pref"] || "MALE";
+      const langPref = storageResult["signmeet_lang_pref"] || "en";
       const response = await fetch("http://localhost:3000/process-sign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: this.USER_ID,
           keypoints,
-          voicePref
+          voicePref,
+          langPref
         })
       });
       const data = await response.json();

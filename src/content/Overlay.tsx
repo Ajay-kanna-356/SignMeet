@@ -36,29 +36,32 @@ export const Overlay = () => {
   const [captionsText, setCaptionsText] = useState("System Ready");
   const [detectedSign, setDetectedSign] = useState("");
   const [voicePref, setVoicePref] = useState(() => {
-    // Initialize from chrome.storage on mount - for now default to MALE
-    // The useEffect below will sync the actual saved value
     return 'MALE';
   });
+  const [langPref, setLangPref] = useState('en');
 
   const manager = useRef(new SpeechManager((newQueue) => {
     setQueue([...newQueue]);
   }));
   const signCaptureRef = useRef<SignCapture | null>(null);
 
-  // Load voicePref from chrome.storage on mount
+  // Load both prefs from chrome.storage on mount
   useEffect(() => {
-    chrome.storage.local.get(['signmeet_voice_pref'], (result) => {
-      if (result.signmeet_voice_pref) {
-        setVoicePref(result.signmeet_voice_pref);
-      }
+    chrome.storage.local.get(['signmeet_voice_pref', 'signmeet_lang_pref'], (result) => {
+      if (result.signmeet_voice_pref) setVoicePref(result.signmeet_voice_pref as string);
+      if (result.signmeet_lang_pref) setLangPref(result.signmeet_lang_pref as string);
     });
   }, []);
 
-  // Whenever voicePref changes, persist to chrome.storage (shared with camera iframe)
+  // Persist voicePref on change
   useEffect(() => {
     chrome.storage.local.set({ signmeet_voice_pref: voicePref });
   }, [voicePref]);
+
+  // Persist langPref on change
+  useEffect(() => {
+    chrome.storage.local.set({ signmeet_lang_pref: langPref });
+  }, [langPref]);
 
   // HANDLE MODES
   useEffect(() => {
@@ -264,28 +267,56 @@ export const Overlay = () => {
           </button>
         </div>
 
-        {/* Voice Preference */}
-        <div style={{ 
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
-          background: C.bgButton, padding: '10px 12px', borderRadius: '8px', border: `1px solid ${C.border}`
-        }}>
-          <span style={{ fontSize: '12px', fontWeight: 'bold', color: C.textPrimary }}>Voice:</span>
-          <select 
-            value={voicePref}
-            onChange={(e) => {
-              const val = e.target.value;
-              setVoicePref(val);
-              // Also persist to chrome.storage so the camera iframe can read it
-              chrome.storage.local.set({ signmeet_voice_pref: val });
-            }}
-            style={{
-              background: 'transparent', color: C.blueText, border: 'none', outline: 'none',
-              fontSize: '12px', fontWeight: 'bold', cursor: 'pointer'
-            }}
-          >
-            <option value="MALE" style={{ background: '#222' }}>Male</option>
-            <option value="FEMALE" style={{ background: '#222' }}>Female</option>
-          </select>
+        {/* Voice & Language Preference Row */}
+        <div style={{ display: 'flex', gap: '8px' }}>
+
+          {/* Voice Dropdown */}
+          <div style={{ 
+            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: C.bgButton, padding: '10px 12px', borderRadius: '8px', border: `1px solid ${C.border}`
+          }}>
+            <span style={{ fontSize: '11px', fontWeight: 'bold', color: C.textPrimary }}>🎙 Voice:</span>
+            <select 
+              value={voicePref}
+              onChange={(e) => {
+                const val = e.target.value;
+                setVoicePref(val);
+                chrome.storage.local.set({ signmeet_voice_pref: val });
+              }}
+              style={{
+                background: 'transparent', color: C.blueText, border: 'none', outline: 'none',
+                fontSize: '11px', fontWeight: 'bold', cursor: 'pointer'
+              }}
+            >
+              <option value="MALE" style={{ background: '#222' }}>Male</option>
+              <option value="FEMALE" style={{ background: '#222' }}>Female</option>
+            </select>
+          </div>
+
+          {/* Language Dropdown */}
+          <div style={{ 
+            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: C.bgButton, padding: '10px 12px', borderRadius: '8px', border: `1px solid ${C.border}`
+          }}>
+            <span style={{ fontSize: '11px', fontWeight: 'bold', color: C.textPrimary }}>🌐 Lang:</span>
+            <select 
+              value={langPref}
+              onChange={(e) => {
+                const val = e.target.value;
+                setLangPref(val);
+                chrome.storage.local.set({ signmeet_lang_pref: val });
+              }}
+              style={{
+                background: 'transparent', color: C.blueText, border: 'none', outline: 'none',
+                fontSize: '11px', fontWeight: 'bold', cursor: 'pointer'
+              }}
+            >
+              <option value="en" style={{ background: '#222' }}>English</option>
+              <option value="hi" style={{ background: '#222' }}>Hindi</option>
+              <option value="ta" style={{ background: '#222' }}>Tamil</option>
+            </select>
+          </div>
+
         </div>
 
         {/* Listening Mode Panel */}

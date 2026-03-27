@@ -5,6 +5,11 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import threading
 import subprocess
+import tempfile
+import time
+import asyncio
+import edge_tts
+import pygame
 from queue import Queue
 from groq import Groq
 from dotenv import load_dotenv
@@ -57,10 +62,17 @@ class PositionalEncoding(tf.keras.layers.Layer):
 # --- GROQ & TTS SETUP ---
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-def gloss_to_sentence(gloss):
+LANGUAGE_MAP = {
+    'en': 'English',
+    'ta': 'Tamil',
+    'hi': 'Hindi',
+}
+
+def gloss_to_sentence(gloss, lang_code='en'):
+    language = LANGUAGE_MAP.get(lang_code, 'English')
     prompt = f"""
-Convert this sign language gloss into a natural English sentence.
-Return ONLY the sentence.use only tenses and fillers extra simple.
+Convert this sign language gloss into a natural {language} sentence.
+Return ONLY the sentence in {language}. Use only simple tenses and words.
 
 Gloss: {gloss}
 
@@ -79,41 +91,82 @@ Sentence:
 
 tts_queue = Queue()
 
-# --- Hardcoded Windows TTS Voice Names ---
+# --- Windows TTS Voice Names (for English) ---
 VOICE_MALE_NAME   = "Microsoft David Desktop"
 VOICE_FEMALE_NAME = "Microsoft Zira Desktop"
+
+# --- Edge TTS Neural Voice Map (for Tamil & Hindi) ---
+# Format: (lang_code, gender) -> edge-tts voice name
+EDGE_VOICE_MAP = {
+    ('ta', 'MALE'):   'ta-IN-ValluvarNeural',
+    ('ta', 'FEMALE'): 'ta-IN-PallaviNeural',
+    ('hi', 'MALE'):   'hi-IN-MadhurNeural',
+    ('hi', 'FEMALE'): 'hi-IN-SwaraNeural',
+}
+
+# Initialize pygame mixer once for audio playback
+pygame.mixer.init()
+
+async def speak_edge_tts(text: str, voice: str, tmp_path: str):
+    """Save edge-tts audio to tmp_path asynchronously."""
+    communicate = edge_tts.Communicate(text, voice)
+    await communicate.save(tmp_path)
+
+def run_edge_tts(text: str, voice: str, tmp_path: str):
+    """Run edge-tts in a fresh event loop (safe to call from any thread)."""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(speak_edge_tts(text, voice, tmp_path))
+    finally:
+        loop.close()
 
 def tts_worker():
     while True:
         task = tts_queue.get()
         if task is None:
             break
-        text, voice_pref = task
+        text, voice_pref, lang_code = task
         try:
-            voice_name = VOICE_FEMALE_NAME if voice_pref == "FEMALE" else VOICE_MALE_NAME
-            print(f"[TTS] Speaking as '{voice_name}': {text}")
+            print(f"[TTS] lang={lang_code}, voice={voice_pref}, text={text}")
+            if lang_code == 'en':
+                # English → Windows TTS (preserves David/Zira preference)
+                voice_name = VOICE_FEMALE_NAME if voice_pref == "FEMALE" else VOICE_MALE_NAME
+                ps_script = (
+                    f'Add-Type -AssemblyName System.Speech; '
+                    f'$s = New-Object System.Speech.Synthesis.SpeechSynthesizer; '
+                    f'$s.SelectVoice("{voice_name}"); '
+                    f'$s.Rate = 1; '
+                    f'$s.Speak("{text}");'
+                )
+                subprocess.run(["powershell", "-Command", ps_script], check=True)
+            else:
+                # Tamil / Hindi → edge-tts Neural Voices
+                edge_voice = EDGE_VOICE_MAP.get((lang_code, voice_pref), EDGE_VOICE_MAP.get((lang_code, 'MALE')))
+                print(f"[TTS] Using edge-tts voice: {edge_voice}")
 
-            # Use PowerShell to call Windows Speech API directly
-            # This is 100% reliable and bypasses all pyttsx3 engine caching issues
-            ps_script = (
-                f'Add-Type -AssemblyName System.Speech; '
-                f'$s = New-Object System.Speech.Synthesis.SpeechSynthesizer; '
-                f'$s.SelectVoice("{voice_name}"); '
-                f'$s.Rate = 1; '
-                f'$s.Speak("{text}");'
-            )
-            subprocess.run(
-                ["powershell", "-Command", ps_script],
-                check=True
-            )
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as f:
+                    tmp_path = f.name
+
+                # Use a fresh event loop — safe inside Flask's background thread
+                run_edge_tts(text, edge_voice, tmp_path)
+                print(f"[TTS] Audio saved ({os.path.getsize(tmp_path)} bytes), playing...")
+
+                # Play using pygame
+                pygame.mixer.music.load(tmp_path)
+                pygame.mixer.music.play()
+                while pygame.mixer.music.get_busy():
+                    time.sleep(0.1)
+                pygame.mixer.music.unload()
+                os.unlink(tmp_path)
         except Exception as e:
             print(f"[TTS] Error: {e}")
         tts_queue.task_done()
 
 threading.Thread(target=tts_worker, daemon=True).start()
 
-def speak(text, voice_pref="MALE"):
-    tts_queue.put((text, voice_pref))
+def speak(text, voice_pref="MALE", lang_code="en"):
+    tts_queue.put((text, voice_pref, lang_code))
 
 # --- LOAD MODEL ---
 print(f"Loading Model: {MODEL_PATH}...")
@@ -134,13 +187,13 @@ user_sessions = {}
 # Global lock to prevent deadlocks when multiple flask threads call model.predict simultaneously
 prediction_lock = threading.Lock()
 
-def process_sentence_thread(user_id, words_copy, voice_pref):
+def process_sentence_thread(user_id, words_copy, voice_pref, lang_code):
     gloss = " ".join(words_copy)
     print("\nGloss:", gloss)
-    sentence = gloss_to_sentence(gloss)
+    sentence = gloss_to_sentence(gloss, lang_code)
     print("Sentence:", sentence)
     
-    speak(sentence, voice_pref)
+    speak(sentence, voice_pref, lang_code)
     
     if user_id in user_sessions:
         user_sessions[user_id]["final_sentence"] = sentence
@@ -153,7 +206,8 @@ def predict():
     user_id = data.get('userId')
     keypoints = data.get('keypoints') 
     voice_pref = data.get('voicePref', 'MALE')
-    print(f"[PREDICT] voicePref received: '{voice_pref}'")
+    lang_code = data.get('langPref', 'en')
+    print(f"[PREDICT] voicePref='{voice_pref}' langPref='{lang_code}'")
 
     if not user_id or keypoints is None:
         return jsonify({"error": "Missing data"}), 400
@@ -208,7 +262,7 @@ def predict():
                 # Start processing thread
                 threading.Thread(
                     target=process_sentence_thread,
-                    args=(user_id, session["collected_words"].copy(), voice_pref),
+                    args=(user_id, session["collected_words"].copy(), voice_pref, lang_code),
                     daemon=True
                 ).start()
                 
