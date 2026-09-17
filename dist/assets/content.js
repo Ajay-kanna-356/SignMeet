@@ -66441,6 +66441,11 @@ No matching component was found for:
     constructor(onNewSpeech) {
       this.observer = null;
       this.lastText = "";
+      this.lastSpeaker = "";
+      this.debounceTimer = null;
+      this.currentUtterance = "";
+      this.lastCommittedText = "";
+      this.DEBOUNCE_MS = 3e3;
       this.UI_JUNK = ["format_size", "font size", "settings", "language", "english", "closed captions"];
       this.callback = onNewSpeech;
     }
@@ -66457,6 +66462,13 @@ No matching component was found for:
       });
     }
     stop() {
+      if (this.currentUtterance && this.debounceTimer) {
+        this.commitUtterance();
+      }
+      if (this.debounceTimer) {
+        clearTimeout(this.debounceTimer);
+        this.debounceTimer = null;
+      }
       this.observer?.disconnect();
     }
     extractText(isInitialBaseline = false) {
@@ -66466,28 +66478,123 @@ No matching component was found for:
       }
       const container = document.querySelector('div[role="region"][aria-label="Captions"], .a4cQT, div[jscontroller="Mx5RQq"]');
       if (!container) return;
+      let currentSpeaker = "";
+      const speakerElements = container.querySelectorAll(".NWpY1d");
+      if (speakerElements.length > 0) {
+        const latestSpeakerEl = speakerElements[speakerElements.length - 1];
+        currentSpeaker = latestSpeakerEl.innerText?.trim() || latestSpeakerEl.textContent?.trim() || "";
+      } else {
+        const docSpeakerElements = document.querySelectorAll(".NWpY1d");
+        if (docSpeakerElements.length > 0) {
+          const latestSpeakerEl = docSpeakerElements[docSpeakerElements.length - 1];
+          currentSpeaker = latestSpeakerEl.innerText?.trim() || latestSpeakerEl.textContent?.trim() || "";
+        }
+      }
       const textElements = container.querySelectorAll('span, .VbkSUe, [jsname="tS79ce"]');
-      if (textElements.length === 0) return;
+      if (textElements.length === 0) {
+        if (currentSpeaker && currentSpeaker !== this.lastSpeaker) {
+          this.lastSpeaker = currentSpeaker;
+          if (!isInitialBaseline) {
+            console.log(`[SIGNMEET] Speaker Changed: ${currentSpeaker}`);
+            this.callback(this.lastText, currentSpeaker);
+          }
+        }
+        return;
+      }
       let validWords = [];
       let seenChunks = /* @__PURE__ */ new Set();
       textElements.forEach((el) => {
-        const text = el.innerText.trim().toLowerCase();
+        const isSpeakerName = Boolean(
+          el.closest('.NWpY1d, .adE6rb, .ade6rb, .KcIKyf, [jsname="Z98uS"]') || el.querySelector('.NWpY1d, .adE6rb, .ade6rb, .KcIKyf, [jsname="Z98uS"]') || el.classList.contains("NWpY1d") || el.classList.contains("adE6rb") || el.classList.contains("ade6rb") || el.getAttribute("jsname") === "Z98uS"
+        );
+        if (isSpeakerName) return;
+        const text = el.innerText?.trim().toLowerCase() || "";
         if (!text || text.length < 2) return;
         if (seenChunks.has(text)) return;
         seenChunks.add(text);
         const isJunk = this.UI_JUNK.some((junk) => text.includes(junk));
-        const isSpeakerName = el.classList.contains("ade6rb") || el.getAttribute("jsname") === "Z98uS";
-        if (!isJunk && !isSpeakerName) {
+        if (!isJunk) {
           validWords.push(text);
         }
       });
-      const cleanText = validWords.join(" ").trim();
-      if (cleanText && cleanText !== this.lastText) {
+      let cleanText = validWords.join(" ").trim();
+      if (currentSpeaker) {
+        const speakerPrefixRegex = new RegExp(`^${currentSpeaker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*[:\\-]\\s*`, "i");
+        cleanText = cleanText.replace(speakerPrefixRegex, "").trim();
+      }
+      if (isInitialBaseline) {
         this.lastText = cleanText;
-        if (!isInitialBaseline) {
-          console.log(`[SIGNMEET] New Speech Detected: ${cleanText}`);
-          this.callback(cleanText);
+        this.lastSpeaker = currentSpeaker;
+        this.lastCommittedText = cleanText;
+        if (currentSpeaker) {
+          this.callback("", currentSpeaker);
         }
+        return;
+      }
+      const textChanged = cleanText && cleanText !== this.lastText;
+      const speakerChanged = Boolean(currentSpeaker && currentSpeaker !== this.lastSpeaker);
+      if (textChanged || speakerChanged) {
+        if (textChanged) {
+          this.lastText = cleanText;
+        }
+        if (speakerChanged) {
+          this.lastSpeaker = currentSpeaker;
+        }
+        console.log(`[SIGNMEET] Caption Update | Speaker: "${currentSpeaker}" | Speech: "${cleanText}"`);
+        this.callback(cleanText, currentSpeaker);
+        if (cleanText) {
+          this.accumulateUtterance(cleanText, speakerChanged);
+        }
+      }
+    }
+    accumulateUtterance(newText, speakerChanged) {
+      if (!newText) return;
+      if (speakerChanged && this.currentUtterance && this.debounceTimer) {
+        this.commitUtterance();
+        this.lastCommittedText = "";
+      }
+      this.currentUtterance = newText;
+      if (this.debounceTimer) {
+        clearTimeout(this.debounceTimer);
+      }
+      this.debounceTimer = setTimeout(() => {
+        this.commitUtterance();
+      }, this.DEBOUNCE_MS);
+    }
+    commitUtterance() {
+      if (this.debounceTimer) {
+        clearTimeout(this.debounceTimer);
+        this.debounceTimer = null;
+      }
+      const raw = this.currentUtterance.trim();
+      if (!raw) return;
+      let completed = raw;
+      if (this.lastCommittedText && raw.toLowerCase().startsWith(this.lastCommittedText.toLowerCase())) {
+        completed = raw.slice(this.lastCommittedText.length).trim();
+      }
+      completed = completed.replace(/^[.,\/#!?$%\^&\*;:{}=\-_`~()]+\s*/, "").trim();
+      if (!completed || completed.length < 2) return;
+      this.lastCommittedText = raw;
+      console.log(`[SIGNMEET] Completed Utterance (debounced): "${completed}"`);
+      this.sendUtteranceToHistory(completed);
+    }
+    async sendUtteranceToHistory(utterance) {
+      try {
+        const payload = JSON.stringify({ utterance });
+        fetch("http://localhost:3000/add-utterance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload
+        }).catch(() => {
+          return fetch("http://127.0.0.1:5001/add-utterance", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: payload
+          });
+        }).catch((err) => {
+          console.warn("[SIGNMEET] Could not post utterance to history backend:", err?.message || err);
+        });
+      } catch (e2) {
       }
     }
   }
@@ -66579,24 +66686,54 @@ No matching component was found for:
     textCaption: "rgba(255, 255, 255, 0.28)",
     shadow: "0 16px 40px rgba(0, 0, 0, 0.85)"
   };
+  const AVATAR_W = 260;
+  const AVATAR_H = 320;
+  const CTRL_LEFT = 30;
+  const CTRL_BOTTOM = 30;
+  const CTRL_HEIGHT = 250;
+  const CTRL_GAP = 16;
+  function getDefaultAvatarPos() {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const avatarBottomFromBottom = CTRL_BOTTOM + CTRL_HEIGHT + CTRL_GAP;
+    const y = Math.max(8, vh - avatarBottomFromBottom - AVATAR_H);
+    const x2 = Math.max(8, CTRL_LEFT);
+    return {
+      x: Math.min(vw - AVATAR_W - 8, x2),
+      y: Math.min(vh - AVATAR_H - 8, y)
+    };
+  }
   const Overlay = () => {
     const [mode, setMode] = reactExports.useState("OFF");
     const [queue, setQueue] = reactExports.useState([]);
-    const [captionsText, setCaptionsText] = reactExports.useState("System Ready");
+    const [captionsText, setCaptionsText] = reactExports.useState("Listening…");
     const [detectedSign, setDetectedSign] = reactExports.useState("");
-    const [voicePref, setVoicePref] = reactExports.useState(() => {
-      return "MALE";
-    });
+    const [voicePref, setVoicePref] = reactExports.useState("MALE");
     const [langPref, setLangPref] = reactExports.useState("en");
-    const manager = reactExports.useRef(new SpeechManager((newQueue) => {
-      setQueue([...newQueue]);
-    }));
+    const [currentSpeaker, setCurrentSpeaker] = reactExports.useState("");
+    const [avatarPos, setAvatarPos] = reactExports.useState(null);
+    const dragState = reactExports.useRef({ active: false, startPx: 0, startPy: 0, origX: 0, origY: 0 });
+    const manager = reactExports.useRef(new SpeechManager((newQueue) => setQueue([...newQueue])));
     const signCaptureRef = reactExports.useRef(null);
     reactExports.useEffect(() => {
-      chrome.storage.local.get(["signmeet_voice_pref", "signmeet_lang_pref"], (result) => {
-        if (result.signmeet_voice_pref) setVoicePref(result.signmeet_voice_pref);
-        if (result.signmeet_lang_pref) setLangPref(result.signmeet_lang_pref);
-      });
+      chrome.storage.local.get(
+        ["signmeet_voice_pref", "signmeet_lang_pref", "signmeet_avatar_pos"],
+        (result) => {
+          if (result.signmeet_voice_pref) setVoicePref(result.signmeet_voice_pref);
+          if (result.signmeet_lang_pref) setLangPref(result.signmeet_lang_pref);
+          if (result.signmeet_avatar_pos) {
+            const stored = result.signmeet_avatar_pos;
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            setAvatarPos({
+              x: Math.max(0, Math.min(vw - AVATAR_W, stored.x)),
+              y: Math.max(0, Math.min(vh - AVATAR_H, stored.y))
+            });
+          } else {
+            setAvatarPos(getDefaultAvatarPos());
+          }
+        }
+      );
     }, []);
     reactExports.useEffect(() => {
       chrome.storage.local.set({ signmeet_voice_pref: voicePref });
@@ -66605,75 +66742,111 @@ No matching component was found for:
       chrome.storage.local.set({ signmeet_lang_pref: langPref });
     }, [langPref]);
     reactExports.useEffect(() => {
-      let speechCapture = null;
-      let signCapture = null;
-      if (mode === "SPEECH_IMPAIRED") {
-        setCaptionsText("Listening to Meet Captions...");
-        setDetectedSign("");
-        speechCapture = new MeetCaptionCapture((text) => {
+      const captureInstance = new MeetCaptionCapture((text, speaker) => {
+        if (speaker !== void 0 && speaker !== "") {
+          setCurrentSpeaker(speaker);
+        }
+        if (text) {
           setCaptionsText(text);
           manager.current.processSentence(text);
-        });
-        speechCapture.start();
-      } else if (mode === "NORMAL") {
-        setCaptionsText("Avatar Paused");
-        setDetectedSign("");
-        let lastSpoken = "";
-        const speakText = (text) => {
-          if ("speechSynthesis" in window) {
-            const utterance = new SpeechSynthesisUtterance(text.toLowerCase());
-            utterance.rate = 1;
-            const pref = localStorage.getItem("signmeet_voice_pref") || "MALE";
-            const isFemale = pref === "FEMALE";
-            const voices = window.speechSynthesis.getVoices();
-            if (voices.length > 0) {
-              const exactFemale = voices.find((v) => v.name.includes("Female") || v.name.includes("Zira") || v.name === "Google US English");
-              const exactMale = voices.find((v) => v.name.includes("Male") || v.name.includes("David"));
-              if (isFemale && exactFemale) {
-                utterance.voice = exactFemale;
-              } else if (!isFemale && exactMale) {
-                utterance.voice = exactMale;
-              } else {
-                const enVoices = voices.filter((v) => v.lang.startsWith("en"));
-                if (enVoices.length > 1) {
-                  utterance.voice = isFemale ? enVoices[1] : enVoices[0];
-                }
-              }
-            }
-            utterance.pitch = isFemale ? 1.6 : 1;
-            window.speechSynthesis.speak(utterance);
-          }
-        };
-        signCapture = new SignCapture((text) => {
-          setDetectedSign(text);
-          if (text && text !== lastSpoken) {
-            speakText(text);
-            lastSpoken = text;
-          }
-        });
-        signCapture.start();
-        signCaptureRef.current = signCapture;
-        signCapture.setVoicePref(voicePref);
-      } else {
-        setCaptionsText("Avatar Paused");
-        setDetectedSign("");
-      }
+        }
+      });
+      captureInstance.start();
       return () => {
-        speechCapture?.stop();
-        signCapture?.stop();
+        captureInstance.stop();
+      };
+    }, []);
+    reactExports.useEffect(() => {
+      if (mode !== "SPEAKING") {
+        setDetectedSign("");
+        return;
+      }
+      let lastSpoken = "";
+      const speakText = (text) => {
+        if (!("speechSynthesis" in window)) return;
+        const utterance = new SpeechSynthesisUtterance(text.toLowerCase());
+        utterance.rate = 1;
+        const pref = voicePref;
+        const isFemale = pref === "FEMALE";
+        const voices = window.speechSynthesis.getVoices();
+        if (voices.length > 0) {
+          const exactFemale = voices.find(
+            (v) => v.name.includes("Female") || v.name.includes("Zira") || v.name === "Google US English"
+          );
+          const exactMale = voices.find((v) => v.name.includes("Male") || v.name.includes("David"));
+          if (isFemale && exactFemale) {
+            utterance.voice = exactFemale;
+          } else if (!isFemale && exactMale) {
+            utterance.voice = exactMale;
+          } else {
+            const enVoices = voices.filter((v) => v.lang.startsWith("en"));
+            if (enVoices.length > 1) {
+              utterance.voice = isFemale ? enVoices[1] : enVoices[0];
+            }
+          }
+        }
+        utterance.pitch = isFemale ? 1.6 : 1;
+        window.speechSynthesis.speak(utterance);
+      };
+      const signCapture = new SignCapture((text) => {
+        setDetectedSign(text);
+        if (text && text !== lastSpoken) {
+          speakText(text);
+          lastSpoken = text;
+        }
+      });
+      signCapture.start();
+      signCapture.setVoicePref(voicePref);
+      signCaptureRef.current = signCapture;
+      return () => {
+        signCapture.stop();
         signCaptureRef.current = null;
       };
     }, [mode]);
-    const handleTestAvatar = () => {
-      if (mode !== "SPEECH_IMPAIRED") setMode("SPEECH_IMPAIRED");
+    reactExports.useEffect(() => {
+      if (signCaptureRef.current) {
+        signCaptureRef.current.setVoicePref(voicePref);
+      }
+    }, [voicePref]);
+    const handleTestAvatar = reactExports.useCallback(() => {
       setQueue([]);
       setTimeout(() => {
         manager.current.processSentence("hello cool good alright");
       }, 100);
-    };
-    const handleChildConsumed = () => {
+    }, []);
+    const handleChildConsumed = reactExports.useCallback(() => {
       setQueue([]);
-    };
+    }, []);
+    const handleDragStart = reactExports.useCallback((e2) => {
+      e2.preventDefault();
+      e2.currentTarget.setPointerCapture(e2.pointerId);
+      const pos = avatarPos ?? getDefaultAvatarPos();
+      dragState.current = {
+        active: true,
+        startPx: e2.clientX,
+        startPy: e2.clientY,
+        origX: pos.x,
+        origY: pos.y
+      };
+    }, [avatarPos]);
+    const handleDragMove = reactExports.useCallback((e2) => {
+      if (!dragState.current.active) return;
+      const dx = e2.clientX - dragState.current.startPx;
+      const dy = e2.clientY - dragState.current.startPy;
+      const x2 = Math.max(0, Math.min(window.innerWidth - AVATAR_W, dragState.current.origX + dx));
+      const y = Math.max(0, Math.min(window.innerHeight - AVATAR_H, dragState.current.origY + dy));
+      setAvatarPos({ x: x2, y });
+    }, []);
+    const handleDragEnd = reactExports.useCallback((e2) => {
+      if (!dragState.current.active) return;
+      dragState.current.active = false;
+      setAvatarPos((current) => {
+        if (current) {
+          chrome.storage.local.set({ signmeet_avatar_pos: current });
+        }
+        return current;
+      });
+    }, []);
     const modeBtn = (active) => ({
       flex: 1,
       padding: "11px 8px",
@@ -66697,33 +66870,125 @@ No matching component was found for:
       flexDirection: "column",
       gap: "10px"
     };
+    const avatarReady = avatarPos !== null;
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { position: "fixed", inset: 0, pointerEvents: "none", zIndex: 999999 }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
+      avatarReady && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
         position: "absolute",
-        bottom: 20,
-        right: 20,
-        width: 250,
-        height: 300,
+        left: avatarPos.x,
+        top: avatarPos.y,
+        width: AVATAR_W,
+        height: AVATAR_H,
         background: C.bgCard,
         borderRadius: "20px",
         border: `1px solid ${C.border}`,
         backdropFilter: "blur(8px)",
-        opacity: mode === "SPEECH_IMPAIRED" || mode === "OFF" && queue.length > 0 ? 1 : 0,
-        pointerEvents: "none",
-        transition: "opacity 0.5s",
-        boxShadow: C.blueGlow
-      }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Canvas, { camera: { position: [0, 0.2, 1.5], fov: 40 }, gl: { alpha: true }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("ambientLight", { intensity: 1.5 }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("pointLight", { position: [5, 5, 5], intensity: 1 }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          AvatarController,
+        pointerEvents: "auto",
+        boxShadow: C.blueGlow,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden"
+      }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
           {
-            queue,
-            onAnimationFinished: handleChildConsumed
+            onPointerDown: handleDragStart,
+            onPointerMove: handleDragMove,
+            onPointerUp: handleDragEnd,
+            onPointerCancel: handleDragEnd,
+            style: {
+              height: "38px",
+              flexShrink: 0,
+              background: "rgba(66, 133, 244, 0.12)",
+              borderBottom: `1px solid ${C.border}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "0 12px",
+              cursor: "grab",
+              userSelect: "none",
+              touchAction: "none"
+            },
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                minWidth: 0,
+                flex: 1,
+                marginRight: "8px"
+              }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
+                  display: "inline-block",
+                  width: "7px",
+                  height: "7px",
+                  borderRadius: "50%",
+                  background: currentSpeaker ? "#34A853" : C.blue,
+                  boxShadow: currentSpeaker ? "0 0 8px #34A853" : "none",
+                  flexShrink: 0
+                } }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: {
+                  fontSize: "11px",
+                  fontWeight: "bold",
+                  color: C.textPrimary,
+                  letterSpacing: "0.2px",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap"
+                }, children: [
+                  "Speaking: ",
+                  currentSpeaker || "Unknown"
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
+                fontSize: "9px",
+                fontWeight: "bold",
+                color: C.blueText,
+                letterSpacing: "0.8px",
+                background: C.blueDim,
+                border: `1px solid ${C.blueBorder}`,
+                padding: "2px 6px",
+                borderRadius: "4px",
+                flexShrink: 0
+              }, children: "ISL" })
+            ]
           }
-        )
-      ] }) }),
-      detectedSign && mode === "NORMAL" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { flex: 1, position: "relative" }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Canvas, { camera: { position: [0, 0.2, 1.5], fov: 40 }, gl: { alpha: true }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("ambientLight", { intensity: 1.5 }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("pointLight", { position: [5, 5, 5], intensity: 1 }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              AvatarController,
+              {
+                queue,
+                onAnimationFinished: handleChildConsumed
+              }
+            )
+          ] }),
+          captionsText && captionsText !== "Listening…" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            padding: "4px 8px",
+            background: "rgba(0, 0, 0, 0.70)",
+            borderTop: `1px solid ${C.border}`,
+            fontSize: "10px",
+            color: C.textMuted,
+            fontStyle: "italic",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            textAlign: "center",
+            pointerEvents: "none"
+          }, children: [
+            '"',
+            captionsText,
+            '"'
+          ] })
+        ] })
+      ] }),
+      detectedSign && mode === "SPEAKING" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
         position: "absolute",
         top: "10%",
         left: "50%",
@@ -66778,31 +67043,21 @@ No matching component was found for:
             fontSize: "10px",
             padding: "3px 9px",
             borderRadius: "4px",
-            background: mode !== "OFF" ? C.blueDim : C.bgButton,
-            color: mode !== "OFF" ? C.blue : C.textMuted,
-            border: `1px solid ${mode !== "OFF" ? C.blueBorder : C.border}`,
+            background: mode === "SPEAKING" ? C.blueDim : C.bgButton,
+            color: mode === "SPEAKING" ? C.blue : C.textMuted,
+            border: `1px solid ${mode === "SPEAKING" ? C.blueBorder : C.border}`,
             fontWeight: "bold",
             letterSpacing: "0.5px"
-          }, children: mode === "OFF" ? "IDLE" : mode.replace("_", " ") })
+          }, children: mode === "SPEAKING" ? "SPEAKING" : "IDLE" })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: "10px" }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => setMode(mode === "SPEECH_IMPAIRED" ? "OFF" : "SPEECH_IMPAIRED"),
-              style: modeBtn(mode === "SPEECH_IMPAIRED"),
-              children: "Listening Mode"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => setMode(mode === "NORMAL" ? "OFF" : "NORMAL"),
-              style: modeBtn(mode === "NORMAL"),
-              children: "Speaking Mode"
-            }
-          )
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { display: "flex", gap: "10px" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => setMode(mode === "SPEAKING" ? "OFF" : "SPEAKING"),
+            style: modeBtn(mode === "SPEAKING"),
+            children: mode === "SPEAKING" ? "⏹ Stop Speaking" : "▶ Speaking Mode"
+          }
+        ) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", gap: "8px" }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
             flex: 1,
@@ -66878,8 +67133,38 @@ No matching component was found for:
             )
           ] })
         ] }),
-        mode === "SPEECH_IMPAIRED" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: infoPanel, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "11px", color: C.textMuted }, children: "Avatar translating speech to signs..." }),
+        mode === "SPEAKING" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: infoPanel, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "11px", color: C.textMuted }, children: "Capturing signs from camera…" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "11px", color: C.blueText, fontStyle: "italic" }, children: detectedSign || "Waiting for signs…" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: infoPanel, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between"
+          }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: "11px", color: C.textMuted }, children: "📡 Meet Captions" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: {
+              fontSize: "9px",
+              padding: "2px 7px",
+              borderRadius: "4px",
+              background: C.blueDim,
+              color: C.blue,
+              border: `1px solid ${C.blueBorder}`,
+              fontWeight: "bold"
+            }, children: "LIVE" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
+            fontSize: "11px",
+            color: C.blueText,
+            fontStyle: "italic",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap"
+          }, children: [
+            currentSpeaker ? `[${currentSpeaker}] ` : "",
+            captionsText.length > 30 ? captionsText.substring(0, 30) + "…" : captionsText
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -66900,24 +67185,9 @@ No matching component was found for:
               },
               children: "▶ Run Avatar Demo"
             }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
-            fontSize: "11px",
-            color: C.blueText,
-            fontStyle: "italic",
-            display: "flex",
-            alignItems: "center",
-            gap: "6px"
-          }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "📡" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: captionsText.length > 30 ? captionsText.substring(0, 30) + "…" : captionsText })
-          ] })
+          )
         ] }),
-        mode === "NORMAL" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: infoPanel, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "11px", color: C.textMuted }, children: "Capturing signs from camera..." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { fontSize: "11px", color: C.blueText, fontStyle: "italic" }, children: detectedSign || "Waiting for signs..." })
-        ] }),
-        mode === "OFF" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { textAlign: "center", padding: "8px", color: C.textCaption, fontSize: "11px" }, children: "Select a mode above to begin." })
+        mode === "OFF" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { textAlign: "center", padding: "4px", color: C.textCaption, fontSize: "11px" }, children: "Start Speaking Mode to sign to your participants." })
       ] })
     ] });
   };

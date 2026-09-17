@@ -2,14 +2,14 @@
 
 export class MeetCaptionCapture {
   private observer: MutationObserver | null = null;
-  private callback: (text: string) => void;
+  private callback: (text: string, speaker?: string) => void;
   private lastText: string = "";
+  private lastSpeaker: string = "";
 
-  // List of known speaker names to ignore (Case Insensitive)
-  // We can also filter these out dynamically if they appear at the start of a block
+  // List of known UI junk to ignore (Case Insensitive)
   private readonly UI_JUNK = ["format_size", "font size", "settings", "language", "english", "closed captions"];
 
-  constructor(onNewSpeech: (text: string) => void) {
+  constructor(onNewSpeech: (text: string, speaker?: string) => void) {
     this.callback = onNewSpeech;
   }
 
@@ -48,17 +48,53 @@ export class MeetCaptionCapture {
 
     if (!container) return;
 
-    // 3. Target the text elements (Broad search)
+    // 3. Extract Speaker Name strictly via .NWpY1d (Do NOT use .notranslate)
+    let currentSpeaker = "";
+    const speakerElements = container.querySelectorAll('.NWpY1d');
+    if (speakerElements.length > 0) {
+      const latestSpeakerEl = speakerElements[speakerElements.length - 1] as HTMLElement;
+      currentSpeaker = latestSpeakerEl.innerText?.trim() || latestSpeakerEl.textContent?.trim() || "";
+    } else {
+      // Fallback check within document in case container query was narrow
+      const docSpeakerElements = document.querySelectorAll('.NWpY1d');
+      if (docSpeakerElements.length > 0) {
+        const latestSpeakerEl = docSpeakerElements[docSpeakerElements.length - 1] as HTMLElement;
+        currentSpeaker = latestSpeakerEl.innerText?.trim() || latestSpeakerEl.textContent?.trim() || "";
+      }
+    }
+
+    // 4. Target the text elements (Broad search)
     const textElements = container.querySelectorAll('span, .VbkSUe, [jsname="tS79ce"]');
 
-    if (textElements.length === 0) return;
+    if (textElements.length === 0) {
+      if (currentSpeaker && currentSpeaker !== this.lastSpeaker) {
+        this.lastSpeaker = currentSpeaker;
+        if (!isInitialBaseline) {
+          console.log(`[SIGNMEET] Speaker Changed: ${currentSpeaker}`);
+          this.callback(this.lastText, currentSpeaker);
+        }
+      }
+      return;
+    }
 
-    // 3. Process the text and filter out duplicates and junk
+    // 5. Process the text and filter out duplicates, junk, and speaker elements
     let validWords: string[] = [];
     let seenChunks = new Set<string>();
 
     textElements.forEach((el) => {
-      const text = (el as HTMLElement).innerText.trim().toLowerCase();
+      // Exclude any element that is part of the speaker name or container
+      const isSpeakerName = Boolean(
+        el.closest('.NWpY1d, .adE6rb, .ade6rb, .KcIKyf, [jsname="Z98uS"]') ||
+        el.querySelector('.NWpY1d, .adE6rb, .ade6rb, .KcIKyf, [jsname="Z98uS"]') ||
+        el.classList.contains('NWpY1d') ||
+        el.classList.contains('adE6rb') ||
+        el.classList.contains('ade6rb') ||
+        el.getAttribute('jsname') === 'Z98uS'
+      );
+
+      if (isSpeakerName) return;
+
+      const text = (el as HTMLElement).innerText?.trim().toLowerCase() || "";
       if (!text || text.length < 2) return;
 
       // Skip if this specific chunk was already seen in this DOM snapshot
@@ -67,24 +103,42 @@ export class MeetCaptionCapture {
       seenChunks.add(text);
 
       const isJunk = this.UI_JUNK.some(junk => text.includes(junk));
-      const isSpeakerName = el.classList.contains('ade6rb') || el.getAttribute('jsname') === 'Z98uS';
-
-      if (!isJunk && !isSpeakerName) {
+      if (!isJunk) {
         validWords.push(text);
       }
     });
 
-    const cleanText = validWords.join(" ").trim();
+    let cleanText = validWords.join(" ").trim();
 
-    // 4. Send to avatar if the text has changed
-    if (cleanText && cleanText !== this.lastText) {
+    // If text begins with "Speaker Name:" prefix, strip it
+    if (currentSpeaker) {
+      const speakerPrefixRegex = new RegExp(`^${currentSpeaker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[:\\-]\\s*`, 'i');
+      cleanText = cleanText.replace(speakerPrefixRegex, '').trim();
+    }
+
+    // 6. Handle baseline vs live updates
+    if (isInitialBaseline) {
       this.lastText = cleanText;
-
-      // ONLY trigger the avatar if we are NOT in the initial setup phase
-      if (!isInitialBaseline) {
-        console.log(`[SIGNMEET] New Speech Detected: ${cleanText}`);
-        this.callback(cleanText);
+      this.lastSpeaker = currentSpeaker;
+      if (currentSpeaker) {
+        this.callback("", currentSpeaker);
       }
+      return;
+    }
+
+    const textChanged = cleanText && cleanText !== this.lastText;
+    const speakerChanged = Boolean(currentSpeaker && currentSpeaker !== this.lastSpeaker);
+
+    if (textChanged || speakerChanged) {
+      if (textChanged) {
+        this.lastText = cleanText;
+      }
+      if (speakerChanged) {
+        this.lastSpeaker = currentSpeaker;
+      }
+
+      console.log(`[SIGNMEET] Caption Update | Speaker: "${currentSpeaker}" | Speech: "${cleanText}"`);
+      this.callback(cleanText, currentSpeaker);
     }
   }
 }
